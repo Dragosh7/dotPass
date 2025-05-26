@@ -1,11 +1,10 @@
-from time import sleep
-
-from customtkinter import *
-from PIL import Image
-import time
+import json
 import os
 import hashlib
-
+from utils.config import PROFILE_PATH
+from customtkinter import *
+from PIL import Image
+from utils.layout import center_window
 from core.encryption import derive_key
 from core.hashing import get_or_create_salt
 from utils.config import SALT_PATH, MASTER_HASH_PATH
@@ -51,6 +50,7 @@ def show_loading_and_validate(password_entry, app_frame):
         conn = load_or_create_vault(key)
 
         feedback_label.destroy()
+        password_entry.delete(0, END)
 
         app.withdraw()
         MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify())
@@ -86,11 +86,22 @@ def launch_app():
     feedback_label = None
     appearance_switch = None
 
+    username = ""
+    if os.path.exists(PROFILE_PATH):
+        try:
+            with open(PROFILE_PATH, 'r') as f:
+                data = json.load(f)
+                full_name = data.get("name", "").strip()
+                username = full_name.split()[0] if full_name else ""
+        except Exception:
+            pass
+
     set_appearance_mode("System")
     set_default_color_theme("ui/themes/premium-blue.json")
 
     app = CTk()
-    app.geometry("600x480")
+    # app.geometry("600x480")
+    center_window(app, 700, 480)
     app.resizable(True, True)
     app.title("dotPass")
 
@@ -108,7 +119,13 @@ def launch_app():
     frame.pack_propagate(0)
     frame.pack(expand=True, side="right", fill="both")
 
-    CTkLabel(master=frame, text="Welcome to dotPass",
+    if username and len(username) > 10:
+        welcome_text = f"Welcome to dotPass,\n{username}!"
+    elif username:
+        welcome_text = f"Welcome to dotPass, {username}!"
+    else:
+        welcome_text = "Welcome to dotPass"
+    CTkLabel(master=frame, text=welcome_text,
              anchor="w", justify="left",
              font=("Arial Bold", 22)).pack(anchor="w", pady=(40, 5), padx=(25, 0))
 

@@ -1,3 +1,5 @@
 DB_PATH = "data/vault.db"
 SALT_PATH = "data/salt.bin"
 MASTER_HASH_PATH = "data/master.hash"
+PROFILE_PATH = "data/profile.json"
+DUMMY_HASH_PATH = "data/dummy.hash"

@@ -1,4 +1,5 @@
 from customtkinter import *
+from utils.layout import center_window
 import sqlite3
 import re
 
@@ -9,7 +10,8 @@ class MainPage:
         self.on_logout = on_logout
 
         self.root = CTkToplevel()
-        self.root.geometry("900x600")
+        # self.root.geometry("900x600")
+        center_window(self.root, 900, 600)
         self.root.title("dotPass Vault")
 
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
@@ -95,7 +97,8 @@ class MainPage:
 
     def add_account_window(self):
         popup = CTkToplevel(self.root)
-        popup.geometry("400x420")
+        #popup.geometry("400x420")
+        center_window(popup,400,420)
         popup.title("Add Account")
         popup.resizable(False, False)
         popup.grab_set()
