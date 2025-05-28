@@ -2,28 +2,33 @@ from customtkinter import *
 from utils.layout import center_window
 import sqlite3
 import re
+import random
+import json
+import os
+from tkinter import messagebox
+from utils.config import PROFILE_PATH
+from ui.sync_vault_page import SyncVaultPage
+from utils.config import DB_PATH, DUMMY_PATH
+from core.db import save_vault
 
 class MainPage:
-    def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout:None):
+    def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None):
         self.master_key = master_key
         self.conn = connection
+        self.conn_dummy = conn_dummy
         self.on_logout = on_logout
+        self.is_dummy = is_dummy
+        self.profile_name = self.get_profile_name()
 
         self.root = CTkToplevel()
-        # self.root.geometry("900x600")
         center_window(self.root, 900, 600)
         self.root.title("dotPass Vault")
-
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
         self.setup_layout()
-        self.load_mock_data()
         self.refresh_account_list()
 
         self.root.mainloop()
-
-    def on_close(self):
-        self.root.destroy()
 
     def logout(self):
         if self.on_logout:
@@ -31,7 +36,6 @@ class MainPage:
         self.root.destroy()
 
     def setup_layout(self):
-        # Sidebar list
         self.sidebar = CTkFrame(self.root, width=250)
         self.sidebar.pack(side="left", fill="y")
 
@@ -41,7 +45,17 @@ class MainPage:
         self.add_button = CTkButton(self.sidebar, text="+ Add Account", command=self.add_account_window)
         self.add_button.pack(pady=10, padx=10)
 
-        # Detail view
+        if not self.is_dummy:
+            self.sync_dummy_button = CTkButton(
+                self.sidebar,
+                text="↺ Sync Dummy Vault",
+                command=lambda: SyncVaultPage(self.root, self.master_key, self.conn, self.logout, self.profile_name)
+            )
+            self.sync_dummy_button.pack(pady=(5, 10), padx=10)
+
+        self.logout_button = CTkButton(self.sidebar, text="Logout", command=self.logout)
+        self.logout_button.pack(pady=(5, 10), padx=10)
+
         self.detail_frame = CTkFrame(self.root)
         self.detail_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
 
@@ -51,20 +65,14 @@ class MainPage:
         self.detail_info = CTkTextbox(self.detail_frame, width=600, height=400, font=("Consolas", 12))
         self.detail_info.pack(pady=10, padx=20)
 
-        self.logout_button = CTkButton(self.sidebar, text="Logout", command=self.logout)
-        self.logout_button.pack(pady=(5, 10), padx=10)
-
-    def load_mock_data(self):
-        with self.conn:
-            self.conn.execute("DELETE FROM accounts")
-            self.conn.executemany("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)", [
-                ("Facebook", "emily@enpass.io", "12345678"),
-                ("Twitter", "emily@enpass.io", "abcd1234"),
-                ("Bank", "emily@bank.com", "securepass"),
-                ("Driving License", "D1451252", "LMV|01/01/1990|Emily"),
-                ("Passport", "ZA65342", "emily@enpass.io"),
-                ("Credit Card", "**** 1234", "CVV: 456")
-            ])
+    def get_profile_name(self):
+        if os.path.exists(PROFILE_PATH):
+            try:
+                with open(PROFILE_PATH, 'r') as f:
+                    return json.load(f).get("name", "")
+            except:
+                return ""
+        return ""
 
     def refresh_account_list(self):
         for widget in self.account_list.winfo_children():
@@ -95,42 +103,41 @@ class MainPage:
         else:
             return "medium", "#FBC02D"
 
+    def generate_dummy_password(self):
+        prefix = "D_"
+        suffix = str(random.randint(1000, 9999))
+        name_part = self.profile_name.split()[0] if self.profile_name else "user"
+        return prefix + name_part + suffix
+
     def add_account_window(self):
         popup = CTkToplevel(self.root)
-        #popup.geometry("400x420")
-        center_window(popup,400,420)
+        center_window(popup, 400, 420)
         popup.title("Add Account")
         popup.resizable(False, False)
         popup.grab_set()
         popup.focus_force()
-
         popup.configure(corner_radius=16)
 
         CTkLabel(popup, text="Add New Account", font=("Arial Bold", 20)).pack(pady=(15, 5))
 
-        # Site field
         site_entry = CTkEntry(popup, placeholder_text="Website / Service")
         site_entry.pack(pady=(10, 5), padx=25)
 
-        # Username/email
         user_entry = CTkEntry(popup, placeholder_text="Username or Email")
         user_entry.pack(pady=5, padx=25)
 
-        # Password field
         pwd_entry = CTkEntry(popup, placeholder_text="Password", show="*")
         pwd_entry.pack(pady=(15, 5), padx=25)
 
         pwd_strength_label = CTkLabel(popup, text="", font=("Arial", 10))
         pwd_strength_label.pack()
 
-        # Confirm password field
         confirm_entry = CTkEntry(popup, placeholder_text="Confirm Password", show="*")
         confirm_entry.pack(pady=(15, 5), padx=25)
 
         match_label = CTkLabel(popup, text="", font=("Arial", 10))
         match_label.pack()
 
-        # Show password checkbox
         def toggle_password():
             show = "" if show_password.get() else "*"
             pwd_entry.configure(show=show)
@@ -139,27 +146,21 @@ class MainPage:
         show_password = BooleanVar(value=False)
         CTkCheckBox(popup, text="Show password", variable=show_password, command=toggle_password).pack(pady=5)
 
-        # Logic for live feedback
         def on_key_update(event=None):
             pwd = pwd_entry.get()
             confirm = confirm_entry.get()
-
-            # Strength
             strength, color = self.password_strength(pwd)
             pwd_strength_label.configure(text=f"Strength: {strength}", text_color=color)
-
-            # Match
             if confirm == "":
                 match_label.configure(text="")
             elif confirm == pwd:
-                match_label.configure(text="✓ Passwords match", text_color="#43A047")
+                match_label.configure(text="\u2713 Passwords match", text_color="#43A047")
             else:
-                match_label.configure(text="✗ Passwords do not match", text_color="#E53935")
+                match_label.configure(text="\u2717 Passwords do not match", text_color="#E53935")
 
         pwd_entry.bind("<KeyRelease>", on_key_update)
         confirm_entry.bind("<KeyRelease>", on_key_update)
 
-        # Save action
         def save():
             site = site_entry.get()
             user = user_entry.get()
@@ -173,10 +174,47 @@ class MainPage:
                 match_label.configure(text="Passwords do not match", text_color="#E53935")
                 return
 
+            stored_pwd = self.generate_dummy_password() if self.is_dummy else pwd
             with self.conn:
                 self.conn.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
-                                  (site, user, pwd))
+                                  (site, user, stored_pwd))
+
+            # Salvează baza principală sau dummy după modificare
+            from utils.config import DB_PATH, DUMMY_PATH
+            from core.db import save_vault
+
+            db_file = DUMMY_PATH if self.is_dummy else DB_PATH
+            save_vault(self.conn, self.master_key, db_file)
+
+            # Dacă suntem în master, adăugăm și cont fals în dummy
+            if not self.is_dummy and self.conn_dummy:
+                fake_pwd = self.generate_dummy_password()
+                with self.conn_dummy:
+                    self.conn_dummy.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
+                                            (site, user, fake_pwd))
+                save_vault(self.conn_dummy, self.master_key, DUMMY_PATH)
+
             popup.destroy()
             self.refresh_account_list()
 
         CTkButton(popup, text="Save Account", command=save, width=240).pack(pady=20)
+
+    def sync_dummy_vault(self):
+        if not self.conn_dummy:
+            messagebox.showerror("Error", "Dummy database connection missing.")
+            return
+
+        with self.conn_dummy:
+            self.conn_dummy.execute("DELETE FROM accounts")
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT site, username FROM accounts")
+        rows = cursor.fetchall()
+
+        for site, user in rows:
+            fake_pwd = self.generate_dummy_password()
+            with self.conn_dummy:
+                self.conn_dummy.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
+                                        (site, user, fake_pwd))
+
+        messagebox.showinfo("Success", "Dummy vault has been synced with fake passwords.")

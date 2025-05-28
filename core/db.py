@@ -2,9 +2,7 @@ import os
 import sqlite3
 from core.encryption import encrypt_data, decrypt_data
 
-VAULT_PATH = "data/vault.db"
-
-def init_vault_database(conn):
+def init_vault_database(conn: sqlite3.Connection):
     with conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
@@ -15,28 +13,28 @@ def init_vault_database(conn):
         )
         """)
 
-def load_or_create_vault(key: bytes) -> sqlite3.Connection:
-    if not os.path.exists(VAULT_PATH):
-        # create and encrypt new database
-        conn = sqlite3.connect(":memory:")
-        init_vault_database(conn)
-
-        with open(VAULT_PATH, "wb") as f:
-            f.write(encrypt_data(export_db(conn), key))
-        return conn
-    else:
-        with open(VAULT_PATH, "rb") as f:
-            decrypted = decrypt_data(f.read(), key)
-            conn = sqlite3.connect(":memory:")
-            conn.executescript(decrypted.decode())
-            return conn
-
 def export_db(conn: sqlite3.Connection) -> bytes:
-    # Export SQLite memory db as SQL string
     with conn:
         dump = "\n".join(conn.iterdump()).encode()
         return dump
 
-def save_vault(conn: sqlite3.Connection, key: bytes):
-    with open(VAULT_PATH, "wb") as f:
+def save_vault(conn: sqlite3.Connection, key: bytes, path: str):
+    with open(path, "wb") as f:
         f.write(encrypt_data(export_db(conn), key))
+
+def load_or_create_vault(key: bytes, path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+
+    if not os.path.exists(path):
+        init_vault_database(conn)
+        with open(path, "wb") as f:
+            f.write(encrypt_data(export_db(conn), key))
+        return conn
+
+    try:
+        with open(path, "rb") as f:
+            decrypted_sql = decrypt_data(f.read(), key).decode()
+            conn.executescript(decrypted_sql)
+            return conn
+    except Exception as e:
+        raise Exception(f"Failed to load vault from {path}: {str(e)}")

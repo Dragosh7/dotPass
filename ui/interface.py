@@ -11,12 +11,13 @@ from utils.config import SALT_PATH, MASTER_HASH_PATH
 from customtkinter import get_appearance_mode
 from ui.main_page import MainPage
 from core.db import load_or_create_vault
+from utils.config import DUMMY_HASH_PATH
+from utils.config import DB_PATH, DUMMY_PATH
 
-# Variabile globale
 feedback_label = None
 appearance_switch = None
 app = None
-
+is_dummy_mode = False
 
 def validate_password(master_password):
     salt = get_or_create_salt(SALT_PATH)
@@ -33,7 +34,7 @@ def validate_password(master_password):
 
 
 def show_loading_and_validate(password_entry, app_frame):
-    global feedback_label, app
+    global feedback_label, app, is_dummy_mode
 
     if feedback_label is not None:
         feedback_label.destroy()
@@ -43,24 +44,37 @@ def show_loading_and_validate(password_entry, app_frame):
     feedback_label.pack(pady=10)
 
     password = password_entry.get()
-    if validate_password(password):
-        feedback_label.configure(text="Success! Access granted.")
-        salt = get_or_create_salt(SALT_PATH)
-        key = derive_key(password, salt)
-        conn = load_or_create_vault(key)
+    salt = get_or_create_salt(SALT_PATH)
+    hash_input = hashlib.sha256(password.encode() + salt).hexdigest()
 
-        feedback_label.destroy()
-        password_entry.delete(0, END)
+    with open(MASTER_HASH_PATH, 'r') as f:
+        master_hash = f.read().strip()
 
-        app.withdraw()
-        MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify())
+    with open(DUMMY_HASH_PATH, 'r') as f:
+        dummy_hash = f.read().strip()
 
+    if hash_input == master_hash:
+        is_dummy_mode = False
+        db_path = DB_PATH
+    elif hash_input == dummy_hash:
+        is_dummy_mode = True
+        db_path = DUMMY_PATH
     else:
         feedback_label.configure(
             text="Master password is incorrect",
             text_color="#E53935",
             font=("Arial", 13, "bold")
         )
+        return
+
+    feedback_label.configure(text="Success! Access granted.")
+    key = derive_key(password, salt)
+    conn = load_or_create_vault(key, db_path)
+    feedback_label.destroy()
+    password_entry.delete(0, END)
+
+    app.withdraw()
+    MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify(), is_dummy=is_dummy_mode)
 
 def update_dropdown_style():
     global appearance_switch
