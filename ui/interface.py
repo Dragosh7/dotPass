@@ -50,13 +50,15 @@ def show_loading_and_validate(password_entry, app_frame):
     with open(MASTER_HASH_PATH, 'r') as f:
         master_hash = f.read().strip()
 
-    with open(DUMMY_HASH_PATH, 'r') as f:
-        dummy_hash = f.read().strip()
+    dummy_hash = None
+    if os.path.exists(DUMMY_HASH_PATH):
+        with open(DUMMY_HASH_PATH, 'r') as f:
+            dummy_hash = f.read().strip()
 
     if hash_input == master_hash:
         is_dummy_mode = False
         db_path = DB_PATH
-    elif hash_input == dummy_hash:
+    elif dummy_hash and hash_input == dummy_hash:
         is_dummy_mode = True
         db_path = DUMMY_PATH
     else:

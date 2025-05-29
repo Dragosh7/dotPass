@@ -3,9 +3,9 @@ from tkinter import messagebox
 from utils.layout import center_window
 from core.encryption import derive_key
 from core.hashing import get_or_create_salt
-from utils.config import SALT_PATH, DUMMY_PATH
+from utils.config import SALT_PATH, DUMMY_PATH, DUMMY_HASH_PATH
 from core.db import load_or_create_vault, save_vault
-
+from ui.create_dummy_vault_page import CreateDummyVaultPage
 import sqlite3
 import hashlib
 import os
@@ -77,6 +77,15 @@ class SyncVaultPage:
         popup.after(3500, shutdown)
 
     def start_sync(self):
+        if not os.path.exists(DUMMY_HASH_PATH):
+            def after_create(dummy_password):
+                self.dummy_entry.delete(0, END)
+                self.dummy_entry.insert(0, dummy_password)
+                self.start_sync()
+
+            CreateDummyVaultPage(self.root, on_done=after_create)
+            return
+
         dummy_password = self.dummy_entry.get()
         if not dummy_password:
             messagebox.showerror("Error", "Please enter dummy password.")
