@@ -6,8 +6,7 @@ from core.hashing import get_or_create_salt
 from utils.config import SALT_PATH, DUMMY_PATH, DUMMY_HASH_PATH
 from core.db import load_or_create_vault, save_vault
 from ui.create_dummy_vault_page import CreateDummyVaultPage
-import sqlite3
-import hashlib
+from utils.style import TITLE_FONT, SUB_FONT, APP_FONT
 import os
 import random
 
@@ -28,13 +27,13 @@ class SyncVaultPage:
         self.root.grab_set()
         self.root.focus_force()
 
-        CTkLabel(self.root, text="Sync Dummy Vault", font=("Arial Bold", 20)).pack(pady=(20, 10))
-        CTkLabel(self.root, text="Enter dummy password to continue:", font=("Arial", 12)).pack(pady=5)
+        CTkLabel(self.root, text="Sync Dummy Vault", font=TITLE_FONT).pack(pady=(20, 10))
+        CTkLabel(self.root, text="Enter dummy password to continue:", font=SUB_FONT).pack(pady=5)
 
-        self.dummy_entry = CTkEntry(self.root, placeholder_text="Dummy Password", show="*")
+        self.dummy_entry = CTkEntry(self.root, placeholder_text="Dummy Password", show="*", font=APP_FONT)
         self.dummy_entry.pack(pady=(10, 5), padx=30)
 
-        CTkButton(self.root, text="Start Sync", command=self.start_sync).pack(pady=20)
+        CTkButton(self.root, text="Start Sync", command=self.start_sync, font=APP_FONT).pack(pady=20)
 
     def generate_fake_password(self):
         prefix = "D_"
@@ -51,11 +50,11 @@ class SyncVaultPage:
         popup.grab_set()
         popup.focus_force()
 
-        CTkLabel(popup, text="Syncing dummy vault...", font=("Arial Bold", 14), text_color="#2F80ED").pack(pady=(25, 8))
-        CTkLabel(popup, text="App will log out after this step.", font=("Arial", 11)).pack()
+        CTkLabel(popup, text="Syncing dummy vault...", font=TITLE_FONT, text_color="#2F80ED").pack(pady=(25, 8))
+        CTkLabel(popup, text="App will log out after this step.", font=SUB_FONT).pack()
 
         # Spinner fallback
-        dots_label = CTkLabel(popup, text="", font=("Arial", 12))
+        dots_label = CTkLabel(popup, text="", font=SUB_FONT)
         dots_label.pack(pady=15)
 
         def animate(count=0):

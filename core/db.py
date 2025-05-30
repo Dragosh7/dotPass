@@ -19,6 +19,9 @@ def export_db(conn: sqlite3.Connection) -> bytes:
         return dump
 
 def save_vault(conn: sqlite3.Connection, key: bytes, path: str):
+    if os.path.exists(path):
+        os.chmod(path, 0o666)
+
     with open(path, "wb") as f:
         f.write(encrypt_data(export_db(conn), key))
 

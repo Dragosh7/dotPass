@@ -7,12 +7,11 @@ from PIL import Image
 from utils.layout import center_window
 from core.encryption import derive_key
 from core.hashing import get_or_create_salt
-from utils.config import SALT_PATH, MASTER_HASH_PATH
-from customtkinter import get_appearance_mode
+from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, DB_PATH, DUMMY_PATH
 from ui.main_page import MainPage
 from core.db import load_or_create_vault
-from utils.config import DUMMY_HASH_PATH
-from utils.config import DB_PATH, DUMMY_PATH
+from customtkinter import get_appearance_mode
+from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT  # 👈 fonturi globale
 
 feedback_label = None
 appearance_switch = None
@@ -32,7 +31,6 @@ def validate_password(master_password):
             saved_hash = f.read().strip()
         return hash_input == saved_hash
 
-
 def show_loading_and_validate(password_entry, app_frame):
     global feedback_label, app, is_dummy_mode
 
@@ -40,7 +38,7 @@ def show_loading_and_validate(password_entry, app_frame):
         feedback_label.destroy()
         feedback_label = None
 
-    feedback_label = CTkLabel(app_frame, text="Validating password...", font=("Arial", 14))
+    feedback_label = CTkLabel(app_frame, text="Validating password...", font=SUB_FONT)
     feedback_label.pack(pady=10)
 
     password = password_entry.get()
@@ -65,11 +63,11 @@ def show_loading_and_validate(password_entry, app_frame):
         feedback_label.configure(
             text="Master password is incorrect",
             text_color="#E53935",
-            font=("Arial", 13, "bold")
+            font=SMALL_FONT
         )
         return
 
-    feedback_label.configure(text="Success! Access granted.")
+    feedback_label.configure(text="Success! Access granted.", font=SUB_FONT)
     key = derive_key(password, salt)
     conn = load_or_create_vault(key, db_path)
     feedback_label.destroy()
@@ -90,7 +88,6 @@ def update_dropdown_style():
             dropdown_hover_color="#2F80ED",
             text_color="#2F80ED"
         )
-
 
 def launch_app():
     global feedback_label, appearance_switch, app
@@ -116,7 +113,6 @@ def launch_app():
     set_default_color_theme("ui/themes/premium-blue.json")
 
     app = CTk()
-    # app.geometry("600x480")
     center_window(app, 700, 480)
     app.resizable(True, True)
     app.title("dotPass")
@@ -135,23 +131,17 @@ def launch_app():
     frame.pack_propagate(0)
     frame.pack(expand=True, side="right", fill="both")
 
-    if username and len(username) > 10:
-        welcome_text = f"Welcome to dotPass,\n{username}!"
-    elif username:
-        welcome_text = f"Welcome to dotPass, {username}!"
-    else:
-        welcome_text = "Welcome to dotPass"
+    welcome_text = f"Welcome to dotPass{', ' + username if username else ''}!"
     CTkLabel(master=frame, text=welcome_text,
-             anchor="w", justify="left",
-             font=("Arial Bold", 22)).pack(anchor="w", pady=(40, 5), padx=(25, 0))
+             anchor="w", justify="left", font=TITLE_FONT).pack(anchor="w", pady=(40, 5), padx=(25, 0))
 
-    CTkLabel(master=frame, text="Enter your Master Password", text_color="#7E7E7E", anchor="w",
-             justify="left", font=("Arial", 12)).pack(anchor="w", padx=(25, 0))
+    CTkLabel(master=frame, text="Enter your Master Password", text_color="#7E7E7E",
+             anchor="w", justify="left", font=SUB_FONT).pack(anchor="w", padx=(25, 0))
 
-    password_entry = CTkEntry(master=frame, placeholder_text="Master Password", show="*", width=240)
+    password_entry = CTkEntry(master=frame, placeholder_text="Master Password", show="*", width=240, font=APP_FONT)
     password_entry.pack(anchor="w", pady=(20, 0), padx=(25, 0))
 
-    CTkButton(master=frame, text="Login", width=240,
+    CTkButton(master=frame, text="Login", width=240, font=APP_FONT,
               command=lambda: show_loading_and_validate(password_entry, frame)).pack(anchor="w", pady=(20, 0),
                                                                                      padx=(25, 0))
 
@@ -162,7 +152,7 @@ def launch_app():
     CTkLabel(master=theme_frame,
              text="Select App Theme",
              text_color="#7E7E7E",
-             font=("Arial", 10),
+             font=SMALL_FONT,
              anchor="e",
              justify="right").pack(anchor="e", padx=5)
 

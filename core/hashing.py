@@ -1,5 +1,7 @@
 import hashlib
 import os
+from utils.setup import protect_file
+
 
 def get_or_create_salt(path="data/salt.bin") -> bytes:
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -8,6 +10,7 @@ def get_or_create_salt(path="data/salt.bin") -> bytes:
         salt = os.urandom(16)
         with open(path, 'wb') as f:
             f.write(salt)
+            protect_file(path)
     else:
         with open(path, 'rb') as f:
             salt = f.read()

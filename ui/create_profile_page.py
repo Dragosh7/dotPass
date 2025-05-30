@@ -4,6 +4,8 @@ from tkinter import messagebox
 from core.hashing import get_or_create_salt
 from core.encryption import derive_key, encrypt_data
 from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, PROFILE_PATH
+from utils.setup import protect_file
+from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT, HEADER_FONT  # 👈 fonturi globale
 
 
 class CreateProfilePage:
@@ -14,26 +16,27 @@ class CreateProfilePage:
         self.root.resizable(False, False)
         self.center_window(self.root)
 
-        CTkLabel(self.root, text="👤", font=("Arial", 48)).pack(pady=(20, 5))
+        CTkLabel(self.root, text="👤", font=TITLE_FONT).pack(pady=(20, 5))
 
-        self.name_entry = CTkEntry(self.root, placeholder_text="Full Name")
+        self.name_entry = CTkEntry(self.root, placeholder_text="Full Name", font=APP_FONT)
         self.name_entry.pack(pady=10, padx=30)
 
-        self.master_entry = CTkEntry(self.root, placeholder_text="Master Password", show="*")
+        self.master_entry = CTkEntry(self.root, placeholder_text="Master Password", show="*", font=APP_FONT)
         self.master_entry.pack(pady=10, padx=30)
 
-        self.confirm_entry = CTkEntry(self.root, placeholder_text="Confirm Password", show="*")
+        self.confirm_entry = CTkEntry(self.root, placeholder_text="Confirm Password", show="*", font=APP_FONT)
         self.confirm_entry.pack(pady=10, padx=30)
 
-        self.dummy_entry = CTkEntry(self.root, placeholder_text="Dummy Password", show="*")
+        self.dummy_entry = CTkEntry(self.root, placeholder_text="Dummy Password", show="*", font=APP_FONT)
         self.dummy_entry.pack(pady=10, padx=30)
 
         self.dummy_warning_shown = False
 
         self.show_pw_var = BooleanVar()
-        CTkCheckBox(self.root, text="Show Passwords", variable=self.show_pw_var, command=self.toggle_password).pack(pady=5)
+        CTkCheckBox(self.root, text="Show Passwords", variable=self.show_pw_var,
+                    command=self.toggle_password, font=SMALL_FONT).pack(pady=5)
 
-        CTkButton(self.root, text="Create Profile", command=self.create_profile).pack(pady=25)
+        CTkButton(self.root, text="Create Profile", command=self.create_profile, font=APP_FONT).pack(pady=25)
 
         self.root.mainloop()
 
@@ -61,8 +64,8 @@ class CreateProfilePage:
         popup.attributes("-alpha", 1.0)
         self.center_window(popup)
 
-        CTkLabel(popup, text="Configuring dotPass...", font=("Arial Bold", 14), text_color="#2F80ED").pack(pady=(25, 8))
-        CTkLabel(popup, text="App will close automatically.", font=("Arial", 11)).pack()
+        CTkLabel(popup, text="Configuring dotPass...", font=HEADER_FONT, text_color="#2F80ED").pack(pady=(25, 8))
+        CTkLabel(popup, text="App will close automatically.", font=SUB_FONT).pack()
 
         progress = CTkProgressBar(popup, orientation="horizontal", mode="indeterminate", width=220)
         progress.pack(pady=20)
@@ -89,6 +92,11 @@ class CreateProfilePage:
             messagebox.showerror("Error", "Master passwords do not match.")
             return
 
+        if master == dummy:
+            messagebox.showerror("Error", "Master password must not match with dummy password.")
+            return
+
+
         if dummy.strip() == "":
             if not self.dummy_warning_shown:
                 self.dummy_warning_shown = True
@@ -103,11 +111,13 @@ class CreateProfilePage:
 
         with open(MASTER_HASH_PATH, 'w') as f:
             f.write(master_hash)
+            protect_file(MASTER_HASH_PATH)
 
         if dummy.strip():
             dummy_hash = hashlib.sha256(dummy.encode() + salt).hexdigest()
             with open(DUMMY_HASH_PATH, 'w') as f:
                 f.write(dummy_hash)
+                protect_file(DUMMY_HASH_PATH)
 
         with open(PROFILE_PATH, 'w') as f:
             json.dump({"name": name}, f)

@@ -6,10 +6,11 @@ import random
 import json
 import os
 from tkinter import messagebox
-from utils.config import PROFILE_PATH
+from utils.config import PROFILE_PATH, DB_PATH, DUMMY_PATH
 from ui.sync_vault_page import SyncVaultPage
-from utils.config import DB_PATH, DUMMY_PATH
 from core.db import save_vault
+from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT, HEADER_FONT, MONO_FONT
+
 
 class MainPage:
     def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None):
@@ -42,27 +43,28 @@ class MainPage:
         self.account_list = CTkScrollableFrame(self.sidebar, width=250)
         self.account_list.pack(expand=True, fill="both", padx=10, pady=10)
 
-        self.add_button = CTkButton(self.sidebar, text="+ Add Account", command=self.add_account_window)
+        self.add_button = CTkButton(self.sidebar, text="+ Add Account", font=APP_FONT, command=self.add_account_window)
         self.add_button.pack(pady=10, padx=10)
 
         if not self.is_dummy:
             self.sync_dummy_button = CTkButton(
                 self.sidebar,
                 text="↺ Sync Dummy Vault",
+                font=APP_FONT,
                 command=lambda: SyncVaultPage(self.root, self.master_key, self.conn, self.logout, self.profile_name)
             )
             self.sync_dummy_button.pack(pady=(5, 10), padx=10)
 
-        self.logout_button = CTkButton(self.sidebar, text="Logout", command=self.logout)
+        self.logout_button = CTkButton(self.sidebar, text="Logout", font=APP_FONT, command=self.logout)
         self.logout_button.pack(pady=(5, 10), padx=10)
 
         self.detail_frame = CTkFrame(self.root)
         self.detail_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
 
-        self.detail_label = CTkLabel(self.detail_frame, text="Select an account", font=("Arial", 18))
+        self.detail_label = CTkLabel(self.detail_frame, text="Select an account", font=HEADER_FONT)
         self.detail_label.pack(pady=(20, 10))
 
-        self.detail_info = CTkTextbox(self.detail_frame, width=600, height=400, font=("Consolas", 12))
+        self.detail_info = CTkTextbox(self.detail_frame, width=600, height=400, font=MONO_FONT)
         self.detail_info.pack(pady=10, padx=20)
 
     def get_profile_name(self):
@@ -81,7 +83,8 @@ class MainPage:
         cursor = self.conn.cursor()
         cursor.execute("SELECT rowid, site FROM accounts")
         for rowid, site in cursor.fetchall():
-            btn = CTkButton(self.account_list, text=site, anchor="w", command=lambda rid=rowid: self.load_account_details(rid))
+            btn = CTkButton(self.account_list, text=site, anchor="w", font=APP_FONT,
+                            command=lambda rid=rowid: self.load_account_details(rid))
             btn.pack(fill="x", padx=5, pady=2)
 
     def load_account_details(self, rowid):
@@ -118,24 +121,24 @@ class MainPage:
         popup.focus_force()
         popup.configure(corner_radius=16)
 
-        CTkLabel(popup, text="Add New Account", font=("Arial Bold", 20)).pack(pady=(15, 5))
+        CTkLabel(popup, text="Add New Account", font=TITLE_FONT).pack(pady=(15, 5))
 
-        site_entry = CTkEntry(popup, placeholder_text="Website / Service")
+        site_entry = CTkEntry(popup, placeholder_text="Website / Service", font=APP_FONT)
         site_entry.pack(pady=(10, 5), padx=25)
 
-        user_entry = CTkEntry(popup, placeholder_text="Username or Email")
+        user_entry = CTkEntry(popup, placeholder_text="Username or Email", font=APP_FONT)
         user_entry.pack(pady=5, padx=25)
 
-        pwd_entry = CTkEntry(popup, placeholder_text="Password", show="*")
+        pwd_entry = CTkEntry(popup, placeholder_text="Password", show="*", font=APP_FONT)
         pwd_entry.pack(pady=(15, 5), padx=25)
 
-        pwd_strength_label = CTkLabel(popup, text="", font=("Arial", 10))
+        pwd_strength_label = CTkLabel(popup, text="", font=SMALL_FONT)
         pwd_strength_label.pack()
 
-        confirm_entry = CTkEntry(popup, placeholder_text="Confirm Password", show="*")
+        confirm_entry = CTkEntry(popup, placeholder_text="Confirm Password", show="*", font=APP_FONT)
         confirm_entry.pack(pady=(15, 5), padx=25)
 
-        match_label = CTkLabel(popup, text="", font=("Arial", 10))
+        match_label = CTkLabel(popup, text="", font=SMALL_FONT)
         match_label.pack()
 
         def toggle_password():
@@ -144,7 +147,8 @@ class MainPage:
             confirm_entry.configure(show=show)
 
         show_password = BooleanVar(value=False)
-        CTkCheckBox(popup, text="Show password", variable=show_password, command=toggle_password).pack(pady=5)
+        CTkCheckBox(popup, text="Show password", variable=show_password,
+                    command=toggle_password, font=SMALL_FONT).pack(pady=5)
 
         def on_key_update(event=None):
             pwd = pwd_entry.get()
@@ -179,14 +183,9 @@ class MainPage:
                 self.conn.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
                                   (site, user, stored_pwd))
 
-            # Salvează baza principală sau dummy după modificare
-            from utils.config import DB_PATH, DUMMY_PATH
-            from core.db import save_vault
-
             db_file = DUMMY_PATH if self.is_dummy else DB_PATH
             save_vault(self.conn, self.master_key, db_file)
 
-            # Dacă suntem în master, adăugăm și cont fals în dummy
             if not self.is_dummy and self.conn_dummy:
                 fake_pwd = self.generate_dummy_password()
                 with self.conn_dummy:
@@ -197,7 +196,7 @@ class MainPage:
             popup.destroy()
             self.refresh_account_list()
 
-        CTkButton(popup, text="Save Account", command=save, width=240).pack(pady=20)
+        CTkButton(popup, text="Save Account", command=save, width=240, font=APP_FONT).pack(pady=20)
 
     def sync_dummy_vault(self):
         if not self.conn_dummy:
