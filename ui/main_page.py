@@ -1,5 +1,7 @@
 from customtkinter import *
 from utils.layout import center_window
+import datetime
+from core.breach_check import check_password_breach
 import sqlite3
 import re
 import random
@@ -10,7 +12,8 @@ from utils.config import PROFILE_PATH, DB_PATH, DUMMY_PATH
 from ui.sync_vault_page import SyncVaultPage
 from core.db import save_vault
 from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT, HEADER_FONT, MONO_FONT
-
+from PIL import Image
+from customtkinter import CTkImage
 
 class MainPage:
     def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None):
@@ -26,7 +29,18 @@ class MainPage:
         self.root.title("dotPass Vault")
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
+        try:
+            warning_icon = Image.open("ui/images/triangle_icon.png").resize((16, 16))
+            self.warning_image = CTkImage(warning_icon)
+        except Exception as e:
+            print("Failed to load warning image:", e)
+            self.warning_image = None
+
         self.setup_layout()
+
+        self.breached_accounts = set()
+        self.check_breaches_if_needed()
+
         self.refresh_account_list()
 
         self.root.mainloop()
@@ -76,6 +90,44 @@ class MainPage:
                 return ""
         return ""
 
+    def check_breaches_if_needed(self):
+        if self.is_dummy:
+            return
+
+        try:
+            if os.path.exists(PROFILE_PATH):
+                with open(PROFILE_PATH, "r+") as f:
+                    profile_data = json.load(f)
+                    last_check_str = profile_data.get("lastCheck")
+
+                    if last_check_str:
+                        last_check = datetime.datetime.fromisoformat(last_check_str)
+                        if (datetime.datetime.now() - last_check).days < -1:
+                            return
+
+                    cursor = self.conn.cursor()
+                    rows = cursor.execute("SELECT site, username, password FROM accounts").fetchall()
+                    breached = []
+
+                    for site, user, pwd in rows:
+                        count = check_password_breach(pwd)
+                        if count > 0:
+                            self.breached_accounts.add((site, user))
+                            breached.append(f"{site} ({user}) - {count} hits")
+
+                    if breached:
+                        messagebox.showwarning("Breach Alert",
+                                               "The following passwords were found in known breaches:\n\n" + "\n".join(
+                                                   breached))
+
+                    # Update last check
+                    profile_data["lastCheck"] = datetime.datetime.now().isoformat()
+                    f.seek(0)
+                    json.dump(profile_data, f)
+                    f.truncate()
+        except Exception as e:
+            print("Failed breach check:", e)
+
     def refresh_account_list(self):
         for widget in self.account_list.winfo_children():
             widget.destroy()
@@ -83,8 +135,30 @@ class MainPage:
         cursor = self.conn.cursor()
         cursor.execute("SELECT rowid, site FROM accounts")
         for rowid, site in cursor.fetchall():
-            btn = CTkButton(self.account_list, text=site, anchor="w", font=APP_FONT,
-                            command=lambda rid=rowid: self.load_account_details(rid))
+            cursor2 = self.conn.cursor()
+            cursor2.execute("SELECT username FROM accounts WHERE rowid=?", (rowid,))
+            user = cursor2.fetchone()[0]
+
+            label_text = site
+            if (site, user) in self.breached_accounts and self.warning_image:
+                btn = CTkButton(
+                    self.account_list,
+                    text=site,
+                    image=self.warning_image,
+                    compound="right",
+                    anchor="w",
+                    font=APP_FONT,
+                    command=lambda rid=rowid: self.load_account_details(rid)
+                )
+            else:
+                btn = CTkButton(
+                    self.account_list,
+                    text=site,
+                    anchor="w",
+                    font=APP_FONT,
+                    command=lambda rid=rowid: self.load_account_details(rid)
+                )
+
             btn.pack(fill="x", padx=5, pady=2)
 
     def load_account_details(self, rowid):

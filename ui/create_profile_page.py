@@ -1,5 +1,6 @@
 from customtkinter import *
 import os, json, hashlib
+import datetime
 from tkinter import messagebox
 from core.hashing import get_or_create_salt
 from core.encryption import derive_key, encrypt_data
@@ -120,6 +121,9 @@ class CreateProfilePage:
                 protect_file(DUMMY_HASH_PATH)
 
         with open(PROFILE_PATH, 'w') as f:
-            json.dump({"name": name}, f)
+            json.dump({
+                "name": name,
+                "lastCheck": datetime.datetime.now().isoformat()
+            }, f)
 
         self.show_restart_popup()
