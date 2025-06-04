@@ -14,9 +14,10 @@ from core.db import save_vault
 from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT, HEADER_FONT, MONO_FONT
 from PIL import Image
 from customtkinter import CTkImage
+from ui.breach_popup import BreachResultPopup
 
 class MainPage:
-    def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None):
+    def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None, was_maximized=False):
         self.master_key = master_key
         self.conn = connection
         self.conn_dummy = conn_dummy
@@ -25,7 +26,11 @@ class MainPage:
         self.profile_name = self.get_profile_name()
 
         self.root = CTkToplevel()
+
         center_window(self.root, 900, 600)
+        if was_maximized:
+            self.root.state("zoomed")
+
         self.root.title("dotPass Vault")
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
@@ -63,14 +68,11 @@ class MainPage:
         if not self.is_dummy:
             self.sync_dummy_button = CTkButton(
                 self.sidebar,
-                text="↺ Sync Dummy Vault",
+                text="⟳ Sync Dummy Vault",
                 font=APP_FONT,
                 command=lambda: SyncVaultPage(self.root, self.master_key, self.conn, self.logout, self.profile_name)
             )
             self.sync_dummy_button.pack(pady=(5, 10), padx=10)
-
-        self.logout_button = CTkButton(self.sidebar, text="Logout", font=APP_FONT, command=self.logout)
-        self.logout_button.pack(pady=(5, 10), padx=10)
 
         self.detail_frame = CTkFrame(self.root)
         self.detail_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
@@ -81,6 +83,17 @@ class MainPage:
         self.detail_info = CTkTextbox(self.detail_frame, width=600, height=400, font=MONO_FONT)
         self.detail_info.pack(pady=10, padx=20)
 
+        self.breach_check_button = CTkButton(
+            self.sidebar,
+            text="🔎 Check Password Safety",
+            font=APP_FONT,
+            command=lambda: self.check_breaches_if_needed(manual=True)
+        )
+        self.breach_check_button.pack(pady=(5, 10), padx=10)
+
+        self.logout_button = CTkButton(self.sidebar, text="Logout", font=APP_FONT, command=self.logout)
+        self.logout_button.pack(pady=(5, 10), padx=10)
+
     def get_profile_name(self):
         if os.path.exists(PROFILE_PATH):
             try:
@@ -90,7 +103,7 @@ class MainPage:
                 return ""
         return ""
 
-    def check_breaches_if_needed(self):
+    def check_breaches_if_needed(self, manual=False):
         if self.is_dummy:
             return
 
@@ -100,34 +113,37 @@ class MainPage:
                     profile_data = json.load(f)
                     last_check_str = profile_data.get("lastCheck")
 
-                    if last_check_str:
+                    if not manual and last_check_str:
                         last_check = datetime.datetime.fromisoformat(last_check_str)
-                        if (datetime.datetime.now() - last_check).days < -1:
-                            return
+                        if (datetime.datetime.now() - last_check).days < 7:
+                            return  # încă nu a trecut timpul
 
                     cursor = self.conn.cursor()
                     rows = cursor.execute("SELECT site, username, password FROM accounts").fetchall()
                     breached = []
 
+                    self.breached_accounts.clear()  # resetăm vechiul set
+
                     for site, user, pwd in rows:
                         count = check_password_breach(pwd)
                         if count > 0:
                             self.breached_accounts.add((site, user))
-                            breached.append(f"{site} ({user}) - {count} hits")
+                            breached.append((site, user, count))  # păstrăm tuple complet
 
-                    if breached:
-                        messagebox.showwarning("Breach Alert",
-                                               "The following passwords were found in known breaches:\n\n" + "\n".join(
-                                                   breached))
+                    # deschidem UI modern, nu alert
+                    BreachResultPopup(self.root, breached)
 
-                    # Update last check
+                    # salvăm noua dată de scanare doar dacă e manual sau scană efectivă
                     profile_data["lastCheck"] = datetime.datetime.now().isoformat()
                     f.seek(0)
                     json.dump(profile_data, f)
                     f.truncate()
+
+                    # refacem UI cu iconițe
+                    self.refresh_account_list()
+
         except Exception as e:
             print("Failed breach check:", e)
-
     def refresh_account_list(self):
         for widget in self.account_list.winfo_children():
             widget.destroy()

@@ -35,6 +35,25 @@ def validate_password(master_password):
 def show_loading_and_validate(password_entry, app_frame):
     global feedback_label, app, is_dummy_mode
 
+    was_maximized = app.state() == "zoomed"
+
+    try:
+        if os.path.exists(PROFILE_PATH):
+            with open(PROFILE_PATH, "r+") as f:
+                profile_data = json.load(f)
+                profile_data["maximized"] = was_maximized
+                f.seek(0)
+                json.dump(profile_data, f)
+                f.truncate()
+    except Exception as e:
+        print("Failed to update profile.json with maximized state:", e)
+
+    try:
+        with open(PROFILE_PATH, "r") as f:
+            was_maximized = json.load(f).get("maximized", False)
+    except:
+        was_maximized = False
+
     if feedback_label is not None:
         feedback_label.destroy()
         feedback_label = None
@@ -75,7 +94,7 @@ def show_loading_and_validate(password_entry, app_frame):
     password_entry.delete(0, END)
 
     app.withdraw()
-    MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify(), is_dummy=is_dummy_mode)
+    MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify(), is_dummy=is_dummy_mode, was_maximized=was_maximized)
 
 def update_dropdown_style():
     global appearance_switch
