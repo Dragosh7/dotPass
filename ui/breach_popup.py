@@ -80,7 +80,7 @@ class BreachResultPopup:
                         font=("Helvetica", 14, "bold"),
                         command=lambda: (webbrowser.open(f"https://www.google.com/search?q={s}+change+password"),
                                          confirm.destroy())
-                    ).pack(pady=(20, 6))  # 🟢 distanță de sus, fără frame
+                    ).pack(pady=(20, 6))
 
                     CTkButton(
                         card,

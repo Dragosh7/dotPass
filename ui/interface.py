@@ -94,7 +94,15 @@ def show_loading_and_validate(password_entry, app_frame):
     password_entry.delete(0, END)
 
     app.withdraw()
-    MainPage(master_key=key, connection=conn, on_logout=lambda: app.deiconify(), is_dummy=is_dummy_mode, was_maximized=was_maximized)
+
+    def on_logout_return(was_max):
+        app.deiconify()
+        if was_max:
+            app.after(100, lambda: app.state("zoomed"))
+
+    MainPage(master_key=key, connection=conn, on_logout=on_logout_return, is_dummy=is_dummy_mode,
+             was_maximized=was_maximized)
+
 
 def update_dropdown_style():
     global appearance_switch
@@ -120,12 +128,14 @@ def launch_app():
     appearance_switch = None
 
     username = ""
+    was_maximized = False
     if os.path.exists(PROFILE_PATH):
         try:
             with open(PROFILE_PATH, 'r') as f:
                 data = json.load(f)
                 full_name = data.get("name", "").strip()
                 username = full_name.split()[0] if full_name else ""
+                was_maximized = data.get("maximized", False)
         except Exception:
             pass
 
@@ -133,11 +143,17 @@ def launch_app():
     set_default_color_theme("ui/themes/premium-blue.json")
 
     app = CTk()
-    center_window(app, 700, 480)
-    app.resizable(True, True)
-    app.title("dotPass")
 
-    # --- LEFT IMAGE ---
+    # IMPORTANT: aplică maximizarea imediat după creare, înainte de orice pack/place
+    if was_maximized:
+        app.after(100, lambda: app.state("zoomed"))
+    else:
+        center_window(app, 700, 480)
+
+    app.title("dotPass")
+    app.resizable(True, True)
+
+    # LEFT IMAGE
     try:
         side_img = CTkImage(light_image=Image.open("ui/images/side-img.png"),
                             dark_image=Image.open("ui/images/side-img.png"),
@@ -146,7 +162,7 @@ def launch_app():
     except:
         pass
 
-    # --- RIGHT FRAME ---
+    # RIGHT FRAME
     frame = CTkFrame(master=app, width=400, height=480)
     frame.pack_propagate(0)
     frame.pack(expand=True, side="right", fill="both")
@@ -165,7 +181,7 @@ def launch_app():
               command=lambda: show_loading_and_validate(password_entry, frame)).pack(anchor="w", pady=(20, 0),
                                                                                      padx=(25, 0))
 
-    # --- THEME DROPDOWN SWITCHER ---
+    # THEME DROPDOWN
     theme_frame = CTkFrame(master=app, fg_color="transparent")
     theme_frame.place(relx=0.97, rely=0.93, anchor="se")
 
@@ -198,4 +214,5 @@ def launch_app():
     appearance_switch.set(current_mode)
     appearance_switch.pack(anchor="e", padx=5, pady=(2, 0))
 
+    # afișăm doar la final
     app.mainloop()

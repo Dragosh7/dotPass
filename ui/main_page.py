@@ -1,4 +1,6 @@
 from customtkinter import *
+from utils.tooltip import SimpleTooltip
+from core.password_generator import generate_password
 from utils.layout import center_window
 import datetime
 from core.breach_check import check_password_breach
@@ -52,7 +54,8 @@ class MainPage:
 
     def logout(self):
         if self.on_logout:
-            self.on_logout()
+            current_state = self.root.state() == "zoomed"
+            self.on_logout(current_state)
         self.root.destroy()
 
     def setup_layout(self):
@@ -83,13 +86,14 @@ class MainPage:
         self.detail_info = CTkTextbox(self.detail_frame, width=600, height=400, font=MONO_FONT)
         self.detail_info.pack(pady=10, padx=20)
 
-        self.breach_check_button = CTkButton(
-            self.sidebar,
-            text="🔎 Check Password Safety",
-            font=APP_FONT,
-            command=lambda: self.check_breaches_if_needed(manual=True)
-        )
-        self.breach_check_button.pack(pady=(5, 10), padx=10)
+        if not self.is_dummy:
+            self.breach_check_button = CTkButton(
+                self.sidebar,
+                text="🔎 Check Password Safety",
+                font=APP_FONT,
+                command=lambda: self.check_breaches_if_needed(manual=True)
+            )
+            self.breach_check_button.pack(pady=(5, 10), padx=10)
 
         self.logout_button = CTkButton(self.sidebar, text="Logout", font=APP_FONT, command=self.logout)
         self.logout_button.pack(pady=(5, 10), padx=10)
@@ -144,6 +148,7 @@ class MainPage:
 
         except Exception as e:
             print("Failed breach check:", e)
+
     def refresh_account_list(self):
         for widget in self.account_list.winfo_children():
             widget.destroy()
@@ -189,7 +194,7 @@ class MainPage:
             self.detail_info.insert("1.0", info)
 
     def password_strength(self, password):
-        if len(password) < 6:
+        if 1 < len(password) < 6:
             return "weak", "#E53935"
         elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 8:
             return "strong", "#43A047"
@@ -204,7 +209,7 @@ class MainPage:
 
     def add_account_window(self):
         popup = CTkToplevel(self.root)
-        center_window(popup, 400, 420)
+        center_window(popup, 400, 580)
         popup.title("Add Account")
         popup.resizable(False, False)
         popup.grab_set()
@@ -219,26 +224,72 @@ class MainPage:
         user_entry = CTkEntry(popup, placeholder_text="Username or Email", font=APP_FONT)
         user_entry.pack(pady=5, padx=25)
 
-        pwd_entry = CTkEntry(popup, placeholder_text="Password", show="*", font=APP_FONT)
+        pwd_entry = CTkEntry(popup, placeholder_text="Password", show="*", font=APP_FONT,width=320)
         pwd_entry.pack(pady=(15, 5), padx=25)
 
-        pwd_strength_label = CTkLabel(popup, text="", font=SMALL_FONT)
-        pwd_strength_label.pack()
-
-        confirm_entry = CTkEntry(popup, placeholder_text="Confirm Password", show="*", font=APP_FONT)
-        confirm_entry.pack(pady=(15, 5), padx=25)
+        confirm_entry = CTkEntry(popup, placeholder_text="Confirm Password", show="*", font=APP_FONT,width=320)
+        confirm_entry.pack(pady=(10, 5), padx=25)
 
         match_label = CTkLabel(popup, text="", font=SMALL_FONT)
         match_label.pack()
 
+        pwd_strength_label = CTkLabel(popup, text="", font=SMALL_FONT)
+        pwd_strength_label.pack()
+
+        length_var = IntVar(value=16)
+        length_slider = CTkSlider(popup, from_=12, to=28, number_of_steps=16, variable=length_var, width=200)
+        length_slider.pack(pady=8)
+
+        length_label = CTkLabel(popup, text="Length: 16", font=SMALL_FONT)
+        length_label.pack()
+
+        def update_length_label(value):
+            length_label.configure(text=f"Length: {int(value)}")
+
+        length_slider.configure(command=update_length_label)
+
+        def fill_generated_password():
+            pwd = generate_password(length_var.get())
+            pwd_entry.delete(0, END)
+            pwd_entry.insert(0, pwd)
+            confirm_entry.delete(0, END)
+            confirm_entry.insert(0, pwd)
+            on_key_update()
+
+        generate_btn = CTkButton(
+            popup,
+            text="Generate Password",
+            font=APP_FONT,
+            command=fill_generated_password,
+            state="disabled"
+        )
+        generate_btn.pack(pady=(10, 4))
+
+        SimpleTooltip(generate_btn, "Please fill in Website and Username before generating a password.")
+
+        # --- CheckBox: Show Password ---
         def toggle_password():
             show = "" if show_password.get() else "*"
             pwd_entry.configure(show=show)
             confirm_entry.configure(show=show)
 
         show_password = BooleanVar(value=False)
-        CTkCheckBox(popup, text="Show password", variable=show_password,
-                    command=toggle_password, font=SMALL_FONT).pack(pady=5)
+        CTkCheckBox(
+            popup,
+            text="Show password",
+            variable=show_password,
+            command=toggle_password,
+            font=SMALL_FONT
+        ).pack(pady=(5, 10))
+
+        def check_enable_generate(event=None):
+            if site_entry.get().strip() and user_entry.get().strip():
+                generate_btn.configure(state="normal")
+            else:
+                generate_btn.configure(state="disabled")
+
+        site_entry.bind("<KeyRelease>", check_enable_generate)
+        user_entry.bind("<KeyRelease>", check_enable_generate)
 
         def on_key_update(event=None):
             pwd = pwd_entry.get()
@@ -286,7 +337,7 @@ class MainPage:
             popup.destroy()
             self.refresh_account_list()
 
-        CTkButton(popup, text="Save Account", command=save, width=240, font=APP_FONT).pack(pady=20)
+        CTkButton(popup, text="Save Account", command=save, width=240, font=APP_FONT).pack(pady=10)
 
     def sync_dummy_vault(self):
         if not self.conn_dummy:
