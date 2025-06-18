@@ -37,7 +37,7 @@ class MainPage:
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
         try:
-            warning_icon = Image.open("ui/images/triangle_icon.png").resize((16, 16))
+            warning_icon = Image.open("ui/images/flag_icon.png").resize((18, 18))
             self.warning_image = CTkImage(warning_icon)
         except Exception as e:
             print("Failed to load warning image:", e)
@@ -183,28 +183,115 @@ class MainPage:
             btn.pack(fill="x", padx=5, pady=2)
 
     def load_account_details(self, rowid):
+        self.detail_frame.destroy()
+        self.detail_frame = CTkFrame(self.root, corner_radius=16)
+        self.detail_frame.pack(side="right", expand=True, fill="both", padx=16, pady=16)
+
         cursor = self.conn.cursor()
         cursor.execute("SELECT site, username, password FROM accounts WHERE rowid=?", (rowid,))
         row = cursor.fetchone()
-        if row:
-            site, user, pwd = row
-            info = f"Site: {site}\nUsername: {user}\nPassword: {pwd}"
-            self.detail_label.configure(text=site)
-            self.detail_info.delete("1.0", "end")
-            self.detail_info.insert("1.0", info)
+        if not row:
+            return
+
+        site, user, pwd = row
+
+        self.current_rowid = rowid
+        self.view_mode = True
+
+        self.detail_title = CTkLabel(self.detail_frame, text="View Account", font=("Helvetica", 20, "bold"))
+        self.detail_title.pack(pady=(10, 20))
+
+        self.site_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
+        self.site_entry.insert(0, site)
+        self.site_entry.configure(state="disabled")
+        self.site_entry.pack(pady=(5, 10))
+
+        self.user_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
+        self.user_entry.insert(0, user)
+        self.user_entry.configure(state="disabled")
+        self.user_entry.pack(pady=(5, 10))
+
+        self.pwd_entry = CTkEntry(self.detail_frame, font=APP_FONT, show="*", width=320)
+        self.pwd_entry.insert(0, pwd)
+        self.pwd_entry.configure(state="disabled")
+        self.pwd_entry.pack(pady=(5, 10))
+
+        self.show_password = BooleanVar(value=False)
+
+        def toggle_show_pwd():
+            self.pwd_entry.configure(show="" if self.show_password.get() else "*")
+
+        CTkCheckBox(self.detail_frame, text="Show password", variable=self.show_password,
+                    command=toggle_show_pwd, font=SMALL_FONT).pack(pady=(10, 10))
+
+        # Label pentru afișarea calității parolei
+        self.strength_label = CTkLabel(self.detail_frame, text="", font=SMALL_FONT)
+        self.strength_label.pack()
+
+        # Buton "Suggest Strong Password", inițial ascuns
+        self.suggest_button = CTkButton(self.detail_frame, text="Suggest Strong Password",
+                                        command=self.suggest_strong_password, font=APP_FONT, width=220)
+        self.suggest_button.pack(pady=(10, 10))
+        self.suggest_button.pack_forget()
+
+        self.edit_btn = CTkButton(self.detail_frame, text="Edit Account",
+                                  command=self.toggle_edit_view, font=APP_FONT, width=150)
+        self.edit_btn.pack(pady=(0, 8))
+
+    def toggle_edit_view(self):
+        if self.view_mode:
+            self.view_mode = False
+            self.site_entry.configure(state="normal")
+            self.user_entry.configure(state="normal")
+            self.pwd_entry.configure(state="normal")
+            self.detail_title.configure(text="Edit Account")
+            self.edit_btn.configure(text="Confirm")
+
+            # Afișăm butonul de sugestie și conectăm verificarea parolei
+            self.suggest_button.pack(pady=(10, 10))
+            self.pwd_entry.bind("<KeyRelease>", self.check_password_strength)
+            self.check_password_strength()  # afișează forțat evaluarea actuală
+
+        else:
+            site = self.site_entry.get().strip()
+            user = self.user_entry.get().strip()
+            pwd = self.pwd_entry.get().strip()
+
+            if not all([site, user, pwd]):
+                messagebox.showerror("Error", "All fields are required.")
+                return
+
+            self.conn.execute("UPDATE accounts SET site=?, username=?, password=? WHERE rowid=?",
+                              (site, user, pwd, self.current_rowid))
+            self.conn.commit()
+            save_vault(self.conn, self.master_key, DUMMY_PATH if self.is_dummy else DB_PATH)
+
+            self.refresh_account_list()
+            self.load_account_details(self.current_rowid)
 
     def password_strength(self, password):
-        if 1 < len(password) < 6:
+        if len(password) < 6:
             return "weak", "#E53935"
         elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 8:
             return "strong", "#43A047"
         else:
             return "medium", "#FBC02D"
 
+    def check_password_strength(self, event=None):
+        pwd = self.pwd_entry.get()
+        strength, color = self.password_strength(pwd)
+        self.strength_label.configure(text=f"Password Strength: {strength}", text_color=color)
+
+    def suggest_strong_password(self):
+        new_pwd = generate_password(14)
+        self.pwd_entry.delete(0, END)
+        self.pwd_entry.insert(0, new_pwd)
+        self.check_password_strength()
+
     def generate_dummy_password(self):
-        prefix = "D_"
+        prefix = "123"
         suffix = str(random.randint(1000, 9999))
-        name_part = self.profile_name.split()[0] if self.profile_name else "user"
+        name_part = self.profile_name.split()[0] if self.profile_name else "password"
         return prefix + name_part + suffix
 
     def add_account_window(self):
@@ -319,7 +406,7 @@ class MainPage:
                 match_label.configure(text="Passwords do not match", text_color="#E53935")
                 return
 
-            stored_pwd = self.generate_dummy_password() if self.is_dummy else pwd
+            stored_pwd = pwd
             with self.conn:
                 self.conn.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
                                   (site, user, stored_pwd))
@@ -338,23 +425,3 @@ class MainPage:
             self.refresh_account_list()
 
         CTkButton(popup, text="Save Account", command=save, width=240, font=APP_FONT).pack(pady=10)
-
-    def sync_dummy_vault(self):
-        if not self.conn_dummy:
-            messagebox.showerror("Error", "Dummy database connection missing.")
-            return
-
-        with self.conn_dummy:
-            self.conn_dummy.execute("DELETE FROM accounts")
-
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT site, username FROM accounts")
-        rows = cursor.fetchall()
-
-        for site, user in rows:
-            fake_pwd = self.generate_dummy_password()
-            with self.conn_dummy:
-                self.conn_dummy.execute("INSERT INTO accounts (site, username, password) VALUES (?, ?, ?)",
-                                        (site, user, fake_pwd))
-
-        messagebox.showinfo("Success", "Dummy vault has been synced with fake passwords.")

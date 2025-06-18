@@ -1,3 +1,5 @@
+import hashlib
+
 from customtkinter import *
 from tkinter import messagebox
 from utils.layout import center_window
@@ -36,10 +38,10 @@ class SyncVaultPage:
         CTkButton(self.root, text="Start Sync", command=self.start_sync, font=APP_FONT).pack(pady=20)
 
     def generate_fake_password(self):
-        prefix = "D_"
+        prefix = "" if self.profile_name else "123"
         suffix = str(random.randint(1000, 9999))
-        name_part = self.profile_name.split()[0] if self.profile_name else "user"
-        return prefix + name_part + suffix
+        name_part = self.profile_name.split()[0] if self.profile_name else "password"
+        return prefix + name_part + suffix + "!"
 
     def show_loading_screen(self):
         popup = CTkToplevel(self.root)
@@ -93,6 +95,13 @@ class SyncVaultPage:
         try:
             salt = get_or_create_salt(SALT_PATH)
             dummy_key = derive_key(dummy_password, salt)
+
+            with open(DUMMY_HASH_PATH, 'r') as f:
+                stored_hash = f.read().strip()
+            hash_input = hashlib.sha256(dummy_password.encode() + salt).hexdigest()
+            if stored_hash != hash_input:
+                messagebox.showerror("Error", "Incorrect dummy password.")
+                return
 
             # Extragem datele reale înainte să închidem conexiunea
             cursor = self.conn.cursor()
