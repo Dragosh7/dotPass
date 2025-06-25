@@ -30,7 +30,7 @@ class CreateDummyVaultPage:
 
         CTkLabel(self.root, text="Dummy Vault Setup", font=TITLE_FONT, text_color="#2F80ED").pack(pady=(10, 5))
         CTkLabel(self.root,
-                 text="This vault is used for emergency situations.\nEnter and confirm a password:",
+                 text="You have not yet configured a Dummy Vault. This is used for emergency situations.\nEnter and confirm a password:",
                  font=SUB_FONT,
                  justify="center",
                  wraplength=360).pack(pady=(0, 10))

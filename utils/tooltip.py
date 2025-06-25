@@ -1,16 +1,18 @@
 import tkinter as tk
 
 class SimpleTooltip:
-    def __init__(self, widget, text):
+    def __init__(self, widget, text, force=False):
         self.widget = widget
         self.text = text
         self.tipwindow = None
         self.alpha = 0
+        self.force = force
         self.widget.bind("<Enter>", self.on_enter)
         self.widget.bind("<Leave>", self.hide)
 
     def on_enter(self, event=None):
-        # ✅ Afișează doar dacă butonul e DISABLED
+        if self.force:
+            self.show()
         if str(self.widget.cget("state")) == "disabled":
             self.show()
 
@@ -18,8 +20,8 @@ class SimpleTooltip:
         if self.tipwindow or not self.text:
             return
 
-        x = self.widget.winfo_rootx() + 40
-        y = self.widget.winfo_rooty() + 20
+        x = self.widget.winfo_rootx() + 15
+        y = self.widget.winfo_rooty() + 34
         self.tipwindow = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
         tw.wm_attributes("-topmost", True)

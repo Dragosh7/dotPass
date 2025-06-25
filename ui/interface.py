@@ -12,7 +12,8 @@ from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, DB_PATH, 
 from ui.main_page import MainPage
 from core.db import load_or_create_vault
 from customtkinter import get_appearance_mode
-from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT  # 👈 fonturi globale
+from utils.setup import protect_file
+from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT
 
 feedback_label = None
 appearance_switch = None
@@ -65,6 +66,13 @@ def show_loading_and_validate(password_entry, app_frame):
     salt = get_or_create_salt(SALT_PATH)
     hash_input = hashlib.sha256(password.encode() + salt).hexdigest()
 
+    if not os.path.exists(MASTER_HASH_PATH):
+        # Salvează automat master.hash
+        hash_val = hashlib.sha256(password.encode() + salt).hexdigest()
+        with open(MASTER_HASH_PATH, "w") as f:
+            f.write(hash_val)
+            protect_file(MASTER_HASH_PATH)
+
     with open(MASTER_HASH_PATH, 'r') as f:
         master_hash = f.read().strip()
 
@@ -102,7 +110,6 @@ def show_loading_and_validate(password_entry, app_frame):
 
     MainPage(master_key=key, connection=conn, on_logout=on_logout_return, is_dummy=is_dummy_mode,
              was_maximized=was_maximized)
-
 
 def update_dropdown_style():
     global appearance_switch

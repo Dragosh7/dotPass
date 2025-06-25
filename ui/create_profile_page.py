@@ -3,10 +3,14 @@ import os, json, hashlib
 import datetime
 from tkinter import messagebox
 from core.hashing import get_or_create_salt
-from core.encryption import derive_key, encrypt_data
+import re
+
+from core.pin_logic import PinLogic
+from ui.dialogs.pin_sending_dialog import PinSendingDialog
 from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, PROFILE_PATH
 from utils.setup import protect_file
-from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT, HEADER_FONT  # 👈 fonturi globale
+from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT, HEADER_FONT
+from utils.tooltip import SimpleTooltip
 
 
 class CreateProfilePage:
@@ -22,6 +26,9 @@ class CreateProfilePage:
         self.name_entry = CTkEntry(self.root, placeholder_text="Full Name", font=APP_FONT)
         self.name_entry.pack(pady=10, padx=30)
 
+        self.phone_entry = CTkEntry(self.root, placeholder_text="Phone Number", font=APP_FONT)
+        self.phone_entry.pack(pady=10, padx=30)
+
         self.master_entry = CTkEntry(self.root, placeholder_text="Master Password", show="*", font=APP_FONT)
         self.master_entry.pack(pady=10, padx=30)
 
@@ -32,6 +39,12 @@ class CreateProfilePage:
         self.dummy_entry.pack(pady=10, padx=30)
 
         self.dummy_warning_shown = False
+
+        SimpleTooltip(self.name_entry, "Your full name (for display only)", force=True)
+        SimpleTooltip(self.master_entry, "Main password that unlocks your vault", force=True)
+        SimpleTooltip(self.confirm_entry, "Repeat your master password to confirm", force=True)
+        SimpleTooltip(self.dummy_entry, "Emergency password to open a decoy vault in emergencies\nTo read more about this functionality consult our app documentation", force=True)
+        SimpleTooltip(self.phone_entry, "Trusted contact’s phone number to receive your recovery PIN\nInclude country code!", force=True)
 
         self.show_pw_var = BooleanVar()
         CTkCheckBox(self.root, text="Show Passwords", variable=self.show_pw_var,
@@ -84,8 +97,9 @@ class CreateProfilePage:
         master = self.master_entry.get()
         confirm = self.confirm_entry.get()
         dummy = self.dummy_entry.get()
+        phone = self.phone_entry.get().strip()
 
-        if not all([name, master, confirm]):
+        if not all([name, phone, master, confirm]):
             messagebox.showerror("Error", "Please fill in name and master password.")
             return
 
@@ -97,6 +111,12 @@ class CreateProfilePage:
             messagebox.showerror("Error", "Master password must not match with dummy password.")
             return
 
+        if not re.fullmatch(r"^\+?\d{10,15}$", phone):
+            messagebox.showerror(
+                "Invalid Phone Number",
+                "Please enter a valid phone number (Use '+' or '00')."
+            )
+            return
 
         if dummy.strip() == "":
             if not self.dummy_warning_shown:
@@ -107,7 +127,49 @@ class CreateProfilePage:
                 )
                 return
 
-        salt = get_or_create_salt(SALT_PATH)
+        confirm = messagebox.askyesno(
+            "Verify Phone Number",
+            f"Is this your trusted contact number?\n\n{phone}\n\nThis is where your recovery PIN will be sent."
+        )
+
+        if not confirm:
+            return
+
+        pin_logic = PinLogic()
+        pin = pin_logic.generate_pin()
+
+        try:
+            messagebox.showinfo(
+                "Recovery PIN Generated",
+                f"Recovery PIN: {pin}\n\nSave this code somewhere safe.\nYou will need it to recover your vault on another device."
+            )
+        except:
+            pass
+
+        def after_send(success):
+            if not success:
+                try:
+                    with open(PROFILE_PATH, "r+") as f:
+                        profile_data = json.load(f)
+                        profile_data["pin_sent"] = False
+                        f.seek(0)
+                        json.dump(profile_data, f)
+                        f.truncate()
+                except Exception as e:
+                    print(f"[dotPass] Could not update profile.json: {e}")
+
+                messagebox.showerror("SMS Failed", "Could not send PIN. Check network connectivity.")
+                self.show_restart_popup()
+                return
+
+            self.show_restart_popup()
+
+        salt = get_or_create_salt(SALT_PATH, pin=pin)
+        self.finalize_profile(name, phone, master, dummy, salt)
+
+        self.root.after(100, lambda: PinSendingDialog(self.root, phone, pin, after_send))
+
+    def finalize_profile(self, name, phone, master, dummy, salt):
         master_hash = hashlib.sha256(master.encode() + salt).hexdigest()
 
         with open(MASTER_HASH_PATH, 'w') as f:
@@ -123,7 +185,9 @@ class CreateProfilePage:
         with open(PROFILE_PATH, 'w') as f:
             json.dump({
                 "name": name,
-                "lastCheck": datetime.datetime.now().isoformat()
+                "phone": phone,
+                "pin_sent": True,
+                "lastCheck": datetime.datetime.now().isoformat(),
+                "reminder": datetime.datetime.now().isoformat()
             }, f)
 
-        self.show_restart_popup()

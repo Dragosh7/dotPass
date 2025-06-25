@@ -1,4 +1,7 @@
 from customtkinter import *
+from core.salt_manager import save_encrypted_salt
+from ui.dialogs.pin_sending_dialog import PinSendingDialog
+from ui.dialogs.sms_feedback_dialog import show_sms_sent_feedback
 from utils.tooltip import SimpleTooltip
 from core.password_generator import generate_password
 from utils.layout import center_window
@@ -10,13 +13,15 @@ import random
 import json
 import os
 from tkinter import messagebox
-from utils.config import PROFILE_PATH, DB_PATH, DUMMY_PATH
+from utils.config import PROFILE_PATH, DB_PATH, DUMMY_PATH, SALT_PATH
 from ui.sync_vault_page import SyncVaultPage
 from core.db import save_vault
 from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT, HEADER_FONT, MONO_FONT
 from PIL import Image
 from customtkinter import CTkImage
 from ui.breach_popup import BreachResultPopup
+from core.pin_logic import should_remind_pin, PinLogic
+
 
 class MainPage:
     def __init__(self, master_key: bytes, connection: sqlite3.Connection, on_logout: None, is_dummy=False, conn_dummy=None, was_maximized=False):
@@ -45,12 +50,90 @@ class MainPage:
 
         self.setup_layout()
 
+        if not self.is_dummy and should_remind_pin():
+            self.root.after(300, lambda: self.ask_send_pin_reminder())
+
         self.breached_accounts = set()
         self.check_breaches_if_needed()
 
         self.refresh_account_list()
 
         self.root.mainloop()
+
+    def ask_send_pin_reminder(self):
+        if not os.path.exists(PROFILE_PATH):
+            return
+
+        try:
+            with open(PROFILE_PATH, "r+") as f:
+                profile_data = json.load(f)
+
+                if profile_data.get("pin_sent", True):
+                    return  # Pin deja trimis
+
+                # verificăm dacă trebuie reamintit
+                reminder_str = profile_data.get("reminder")
+                if reminder_str:
+                    try:
+                        reminder_date = datetime.datetime.fromisoformat(reminder_str)
+                        if reminder_date > datetime.datetime.now():
+                            return  # încă nu a trecut o săptămână
+                    except Exception:
+                        pass  # dacă reminder_str e corupt, continuăm
+
+                phone = profile_data.get("phone")
+
+                if not phone:
+                    return
+
+                should_send = messagebox.askyesnocancel(
+                    "Security Reminder",
+                    f"The recovery PIN was not sent. A code will be sent shortly after.\n\n"
+                    f"Do you want to keep the same phone number?\n\n"
+                    f"{phone}"
+                )
+
+                if should_send is None:
+                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+                    f.seek(0)
+                    json.dump(profile_data, f)
+                    f.truncate()
+                    return  # Cancel (with reminder)
+                elif should_send is False:
+                    from ui.dialogs.change_phone_dialog import ChangePhoneNumberDialog
+                    ChangePhoneNumberDialog()
+                    return
+
+                # Ștergem salt.enc dacă există
+                from utils.config import ENCRYPTED_SALT_PATH
+                if os.path.exists(ENCRYPTED_SALT_PATH):
+                    os.remove(ENCRYPTED_SALT_PATH)
+
+                pin_logic = PinLogic()
+                pin = pin_logic.generate_pin()
+                if os.path.exists(SALT_PATH):
+                    if pin:
+                        try:
+                            with open(SALT_PATH, "rb") as sfile:
+                                salt = sfile.read()
+                                save_encrypted_salt(salt, pin)
+                        except Exception as e:
+                            print(f"[dotPass] Failed to save encrypted salt: {e}")
+
+                # Actualizăm și salvăm din nou profilul
+                # profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
+                # f.seek(0)
+                # json.dump(profile_data, f)
+                # f.truncate()
+
+                success = PinSendingDialog.send_sms_direct(phone, pin)
+                if success:
+                    show_sms_sent_feedback(self.root, phone, pin)
+                else:
+                    messagebox.showerror("Error", "Could not send PIN. Check your internet connection.")
+
+        except Exception as e:
+            print(f"[dotPass - Reminder PIN] Error: {e}")
 
     def logout(self):
         if self.on_logout:
@@ -109,6 +192,14 @@ class MainPage:
 
     def check_breaches_if_needed(self, manual=False):
         if self.is_dummy:
+            return
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM accounts")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            if manual:
+                messagebox.showinfo("No Passwords", "You have no passwords saved yet to check for breaches.")
             return
 
         try:
@@ -195,26 +286,60 @@ class MainPage:
 
         site, user, pwd = row
 
+        try:
+            icon_site = CTkImage(Image.open("ui/images/website.png").resize((22, 22)))
+            icon_user = CTkImage(Image.open("ui/images/username.png").resize((22, 22)))
+            icon_pass = CTkImage(Image.open("ui/images/pass.png").resize((22, 22)))
+        except:
+            icon_site = icon_user = icon_pass = None
+
         self.current_rowid = rowid
         self.view_mode = True
 
         self.detail_title = CTkLabel(self.detail_frame, text="View Account", font=("Helvetica", 20, "bold"))
         self.detail_title.pack(pady=(10, 20))
 
+        # ---- WEBSITE ----
+        CTkLabel(self.detail_frame, text="Website:", font=SMALL_FONT, text_color="#AAAAAA").pack(anchor="w", padx=75,
+                                                                                                 pady=(5, 0))
+
         self.site_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
         self.site_entry.insert(0, site)
         self.site_entry.configure(state="disabled")
-        self.site_entry.pack(pady=(5, 10))
+        self.site_entry.pack(pady=(0, 10), padx=25)
+
+        # ---- USERNAME ----
+        CTkLabel(self.detail_frame, text="Username:", font=SMALL_FONT, text_color="#AAAAAA").pack(anchor="w", padx=75,
+                                                                                                  pady=(5, 0))
 
         self.user_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
         self.user_entry.insert(0, user)
         self.user_entry.configure(state="disabled")
-        self.user_entry.pack(pady=(5, 10))
+        self.user_entry.pack(pady=(0, 10), padx=25)
 
-        self.pwd_entry = CTkEntry(self.detail_frame, font=APP_FONT, show="*", width=320)
+        # ---- PASSWORD ----
+        CTkLabel(self.detail_frame, text="Password:", font=SMALL_FONT, text_color="#AAAAAA").pack(anchor="w", padx=75,
+                                                                                                  pady=(5, 0))
+
+        self.pwd_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320, show="*")
         self.pwd_entry.insert(0, pwd)
         self.pwd_entry.configure(state="disabled")
-        self.pwd_entry.pack(pady=(5, 10))
+        self.pwd_entry.pack(pady=(0, 10), padx=25)
+
+        # self.site_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
+        # self.site_entry.insert(0, site)
+        # self.site_entry.configure(state="disabled")
+        # self.site_entry.pack(pady=(5, 10))
+        #
+        # self.user_entry = CTkEntry(self.detail_frame, font=APP_FONT, width=320)
+        # self.user_entry.insert(0, user)
+        # self.user_entry.configure(state="disabled")
+        # self.user_entry.pack(pady=(5, 10))
+        #
+        # self.pwd_entry = CTkEntry(self.detail_frame, font=APP_FONT, show="*", width=320)
+        # self.pwd_entry.insert(0, pwd)
+        # self.pwd_entry.configure(state="disabled")
+        # self.pwd_entry.pack(pady=(5, 10))
 
         self.show_password = BooleanVar(value=False)
 
