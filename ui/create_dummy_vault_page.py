@@ -1,7 +1,6 @@
 from customtkinter import *
 from tkinter import messagebox
 import hashlib
-import os
 from utils.layout import center_window
 from utils.config import SALT_PATH, DUMMY_HASH_PATH
 from core.hashing import get_or_create_salt

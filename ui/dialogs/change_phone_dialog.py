@@ -1,11 +1,11 @@
 from customtkinter import *
 from tkinter import messagebox
-import json
-import re
 from utils.config import PROFILE_PATH
 from utils.style import TITLE_FONT, APP_FONT
 from utils.layout import center_window
 from utils.tooltip import SimpleTooltip
+import json
+import re
 
 class ChangePhoneNumberDialog:
     def __init__(self):

@@ -1,7 +1,5 @@
 import json
 import hashlib
-import datetime
-from core.breach_check import check_password_breach
 from utils.config import PROFILE_PATH
 from customtkinter import *
 from PIL import Image
@@ -67,7 +65,6 @@ def show_loading_and_validate(password_entry, app_frame):
     hash_input = hashlib.sha256(password.encode() + salt).hexdigest()
 
     if not os.path.exists(MASTER_HASH_PATH):
-        # Salvează automat master.hash
         hash_val = hashlib.sha256(password.encode() + salt).hexdigest()
         with open(MASTER_HASH_PATH, "w") as f:
             f.write(hash_val)
@@ -151,7 +148,6 @@ def launch_app():
 
     app = CTk()
 
-    # IMPORTANT: aplică maximizarea imediat după creare, înainte de orice pack/place
     if was_maximized:
         app.after(100, lambda: app.state("zoomed"))
     else:
@@ -221,5 +217,4 @@ def launch_app():
     appearance_switch.set(current_mode)
     appearance_switch.pack(anchor="e", padx=5, pady=(2, 0))
 
-    # afișăm doar la final
     app.mainloop()

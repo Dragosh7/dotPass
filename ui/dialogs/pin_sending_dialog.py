@@ -1,13 +1,13 @@
-from customtkinter import CTkToplevel, CTkLabel, CTkProgressBar
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import os
 import threading
 import requests
 import time
+from customtkinter import CTkToplevel, CTkLabel, CTkProgressBar
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from utils.secrets import SMSO_API_KEY, SMSO_SENDER_ID, GOOGLE_GEOLOCATION_API_KEY
 from utils.style import APP_FONT
-
+from utils.check_internet import has_internet
 
 class PinSendingDialog:
     def __init__(self, parent, phone: str, pin: str, on_result):
@@ -45,6 +45,11 @@ class PinSendingDialog:
         win.geometry(f"{w}x{h}+{x}+{y}")
 
     def _send_sms_thread(self):
+
+        if not has_internet():
+            self.dialog.after(1000, lambda: self._finish(False))
+            return
+
         url = "https://app.smso.ro/api/v1/send"
         headers = {"X-Authorization": SMSO_API_KEY}
         data = {
@@ -53,18 +58,18 @@ class PinSendingDialog:
             "body": f"Your dotPass recovery PIN is: {self.pin}"
         }
 
-        print("\n=== DEBUG SMS PAYLOAD ===")
-        print(f"URL: {url}")
-        print(f"Headers: {headers}")
-        print(f"Data: {data}")
-        print("=========================\n")
-        success = True
-        # try:
-        #     response = requests.post(url, headers=headers, data=data)
-        #     success = response.status_code == 200
-        # except Exception as e:
-        #     print(f"[dotPass] SMS error: {e}")
-        #     success = False
+        # print("\n=== DEBUG SMS PAYLOAD ===")
+        # print(f"URL: {url}")
+        # print(f"Headers: {headers}")
+        # print(f"Data: {data}")
+        # print("=========================\n")
+        success = False
+        try:
+            response = requests.post(url, headers=headers, data=data, timeout=5)
+            success = response.status_code == 200
+        except Exception as e:
+            # print(f"[dotPass] SMS error: {e}")
+            success = False
 
         self.dialog.after(3500, lambda: self._finish(success))
 
@@ -127,6 +132,10 @@ class PinSendingDialog:
 
     @staticmethod
     def send_dummy_emergency_sms(phone: str) -> bool:
+
+        if not has_internet():
+            return False
+
         if not phone or phone.strip() == "":
             return False
         try:
@@ -224,6 +233,10 @@ class PinSendingDialog:
 
     @staticmethod
     def send_sms_direct(phone: str, pin: str) -> bool:
+
+        if not has_internet():
+            return False
+
         url = "https://app.smso.ro/api/v1/send"
         headers = {"X-Authorization": SMSO_API_KEY}
         data = {
@@ -232,16 +245,15 @@ class PinSendingDialog:
             "body": f"Your dotPass recovery PIN is: {pin}"
         }
 
-        print("\n=== DEBUG SMS PAYLOAD ===")
-        print(f"URL: {url}")
-        print(f"Headers: {headers}")
-        print(f"Data: {data}")
-        print("=========================\n")
+        # print("\n=== DEBUG SMS PAYLOAD ===")
+        # print(f"URL: {url}")
+        # print(f"Headers: {headers}")
+        # print(f"Data: {data}")
+        # print("=========================\n")
 
-        # try:
-        #     response = requests.post(url, headers=headers, data=data)
-        #     return response.status_code == 200
-        # except Exception as e:
-        #     print(f"[dotPass - send_sms_direct] Error: {e}")
-        #     return False
-        return True
+        try:
+            response = requests.post(url, headers=headers, data=data)
+            return response.status_code == 200
+        except Exception as e:
+            # print(f"[dotPass - send_sms_direct] Error: {e}")
+            return False

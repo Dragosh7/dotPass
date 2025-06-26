@@ -39,9 +39,7 @@ def send_dummy_emergency_sms(phone: str) -> bool:
         print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
         return False
 
-
-# ✅ Acesta este testul real detectat de pytest
 def test_send_dummy_emergency_sms():
-    phone = "+40700000000"  # înlocuiește cu ceva valid de test (nu va fi trimis)
+    phone = "+40700000000"
     result = send_dummy_emergency_sms(phone)
     assert result == True

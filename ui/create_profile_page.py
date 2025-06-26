@@ -4,14 +4,12 @@ import datetime
 from tkinter import messagebox
 from core.hashing import get_or_create_salt
 import re
-
 from core.pin_logic import PinLogic
 from ui.dialogs.pin_sending_dialog import PinSendingDialog
 from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, PROFILE_PATH
 from utils.setup import protect_file
 from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT, HEADER_FONT
 from utils.tooltip import SimpleTooltip
-
 
 class CreateProfilePage:
     def __init__(self):
