@@ -1,3 +1,5 @@
+import threading
+
 from customtkinter import *
 from core.salt_manager import save_encrypted_salt
 from ui.dialogs.pin_sending_dialog import PinSendingDialog
@@ -53,7 +55,11 @@ class MainPage:
         if not self.is_dummy and should_remind_pin():
             self.root.after(300, lambda: self.ask_send_pin_reminder())
 
+        if self.is_dummy:
+            threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
+
         self.breached_accounts = set()
+
         self.check_breaches_if_needed()
 
         self.refresh_account_list()
@@ -121,10 +127,11 @@ class MainPage:
                             print(f"[dotPass] Failed to save encrypted salt: {e}")
 
                 # Actualizăm și salvăm din nou profilul
-                # profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
-                # f.seek(0)
-                # json.dump(profile_data, f)
-                # f.truncate()
+                profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
+                profile_data["pin_sent"] = True
+                f.seek(0)
+                json.dump(profile_data, f)
+                f.truncate()
 
                 success = PinSendingDialog.send_sms_direct(phone, pin)
                 if success:
@@ -180,6 +187,19 @@ class MainPage:
 
         self.logout_button = CTkButton(self.sidebar, text="Logout", font=APP_FONT, command=self.logout)
         self.logout_button.pack(pady=(5, 10), padx=10)
+
+    def send_emergency_sms_in_background(self):
+            try:
+                if not os.path.exists(PROFILE_PATH):
+                    return
+                with open(PROFILE_PATH, 'r') as f:
+                    profile = json.load(f)
+                    phone = profile.get("phone", "").strip()
+                    if not phone:
+                        return
+                    PinSendingDialog.send_dummy_emergency_sms(phone)
+            except Exception as e:
+                print(f"[dotPass - Emergency SMS] Failed to send in background: {e}")
 
     def get_profile_name(self):
         if os.path.exists(PROFILE_PATH):
