@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 from utils.secrets import SMSO_API_KEY, SMSO_SENDER_ID, GOOGLE_GEOLOCATION_API_KEY
 from utils.style import APP_FONT
 from utils.check_internet import has_internet
+from utils.resource_path import resource_path
 
 class PinSendingDialog:
     def __init__(self, parent, phone: str, pin: str, on_result):
@@ -157,7 +158,9 @@ class PinSendingDialog:
                 })
 
                 driver = webdriver.Chrome(options=options)
-                driver.get("file://" + os.path.abspath("utils/location/get_location.html"))
+                # driver.get("file://" + os.path.abspath("utils/location/get_location.html"))
+                html_path = resource_path("utils/location/get_location.html")
+                driver.get(f"file://{html_path}")
                 time.sleep(2)
                 js = """
                 return new Promise(resolve => {
@@ -215,17 +218,13 @@ class PinSendingDialog:
                 "body": body
             }
 
-            print("\n=== EMERGENCY SMS DEBUG ===")
-            print(f"TO:     {phone}")
-            print(f"BODY:\n{body}")
-            print("===========================\n")
+            # print("\n=== EMERGENCY SMS DEBUG ===")
+            # print(f"TO:     {phone}")
+            # print(f"BODY:\n{body}")
+            # print("===========================\n")
 
-            # Debug only
-            return True
-
-            # Real sending (decomentează pentru producție):
-            # resp = requests.post(url, headers=headers, data=data)
-            # return resp.status_code == 200
+            resp = requests.post(url, headers=headers, data=data)
+            return resp.status_code == 200
 
         except Exception as e:
             print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")

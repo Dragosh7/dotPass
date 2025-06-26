@@ -4,6 +4,7 @@ from customtkinter import *
 from core.salt_manager import save_encrypted_salt
 from ui.dialogs.pin_sending_dialog import PinSendingDialog
 from ui.dialogs.sms_feedback_dialog import show_sms_sent_feedback
+from utils.resource_path import resource_path
 from utils.tooltip import SimpleTooltip
 from core.password_generator import generate_password
 from utils.layout import center_window
@@ -44,7 +45,7 @@ class MainPage:
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
         try:
-            warning_icon = Image.open("ui/images/flag_icon.png").resize((18, 18))
+            warning_icon = Image.open(resource_path("ui/images/flag_icon.png")).resize((18, 18))
             self.warning_image = CTkImage(warning_icon)
         except Exception as e:
             print("Failed to load warning image:", e)
@@ -300,13 +301,6 @@ class MainPage:
 
         site, user, pwd = row
 
-        try:
-            icon_site = CTkImage(Image.open("ui/images/website.png").resize((22, 22)))
-            icon_user = CTkImage(Image.open("ui/images/username.png").resize((22, 22)))
-            icon_pass = CTkImage(Image.open("ui/images/pass.png").resize((22, 22)))
-        except:
-            icon_site = icon_user = icon_pass = None
-
         self.current_rowid = rowid
         self.view_mode = True
 
@@ -408,9 +402,9 @@ class MainPage:
             self.load_account_details(self.current_rowid)
 
     def password_strength(self, password):
-        if len(password) < 6:
+        if len(password) < 8:
             return "weak", "#E53935"
-        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 8:
+        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 10:
             return "strong", "#43A047"
         else:
             return "medium", "#FBC02D"
@@ -524,9 +518,9 @@ class MainPage:
             if confirm == "":
                 match_label.configure(text="")
             elif confirm == pwd:
-                match_label.configure(text="\u2713 Passwords match", text_color="#43A047")
+                match_label.configure(text="Passwords match", text_color="#43A047")
             else:
-                match_label.configure(text="\u2717 Passwords do not match", text_color="#E53935")
+                match_label.configure(text="Passwords do not match", text_color="#E53935")
 
         pwd_entry.bind("<KeyRelease>", on_key_update)
         confirm_entry.bind("<KeyRelease>", on_key_update)

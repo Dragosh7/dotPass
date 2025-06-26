@@ -10,6 +10,8 @@ from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, DB_PATH, 
 from ui.main_page import MainPage
 from core.db import load_or_create_vault
 from customtkinter import get_appearance_mode
+
+from utils.resource_path import resource_path
 from utils.setup import protect_file
 from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT
 
@@ -144,7 +146,7 @@ def launch_app():
             pass
 
     set_appearance_mode("System")
-    set_default_color_theme("ui/themes/premium-blue.json")
+    set_default_color_theme(resource_path("ui/themes/premium-blue.json"))
 
     app = CTk()
 
@@ -158,8 +160,8 @@ def launch_app():
 
     # LEFT IMAGE
     try:
-        side_img = CTkImage(light_image=Image.open("ui/images/side-img.png"),
-                            dark_image=Image.open("ui/images/side-img.png"),
+        side_img = CTkImage(light_image=Image.open(resource_path("ui/images/side-img.png")),
+                            dark_image=Image.open(resource_path("ui/images/side-img.png")),
                             size=(256, 256))
         CTkLabel(master=app, text="", image=side_img).pack(expand=False, side="left")
     except:
