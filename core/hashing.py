@@ -1,11 +1,8 @@
 import hashlib
 import os
-import random
-from tkinter import messagebox
 
 from core.salt_manager import save_encrypted_salt
 from utils.setup import protect_file
-
 
 def get_or_create_salt(path="data/salt.bin", pin: str = None) -> bytes:
     os.makedirs(os.path.dirname(path), exist_ok=True)

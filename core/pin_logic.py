@@ -3,7 +3,6 @@ import json
 import datetime
 from utils.config import PROFILE_PATH
 
-
 class PinLogic:
     def __init__(self):
         self.pin = None
@@ -12,14 +11,12 @@ class PinLogic:
         self.pin = str(random.randint(100000, 999999))
         return self.pin
 
-
 def should_remind_pin():
     try:
         with open(PROFILE_PATH, "r") as f:
             profile = json.load(f)
 
         if not profile.get("pin_sent", False):
-            # Nu s-a trimis niciodată PIN → trimitem acum
             return True
 
         last_reminder = profile.get("reminder")
@@ -30,5 +27,5 @@ def should_remind_pin():
         return (datetime.datetime.now() - last_dt).days >= 7
 
     except Exception as e:
-        print(f"[dotPass] Failed to check pin reminder: {e}")
+        # print(f"[dotPass] Failed to check pin reminder: {e}")
         return False

@@ -1,10 +1,10 @@
 from customtkinter import *
 from tkinter import messagebox
 import hashlib
-import os
 from utils.layout import center_window
 from utils.config import SALT_PATH, DUMMY_HASH_PATH
 from core.hashing import get_or_create_salt
+from utils.resource_path import resource_path
 from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT
 from PIL import Image
 from customtkinter import CTkImage
@@ -23,7 +23,7 @@ class CreateDummyVaultPage:
 
         # Optional icon at top
         try:
-            icon = CTkImage(Image.open("ui/images/sun.png"), size=(64, 64))
+            icon = CTkImage(Image.open(resource_path("ui/images/sun.png")), size=(64, 64))
             CTkLabel(self.root, text="", image=icon).pack(pady=(15, 0))
         except:
             pass

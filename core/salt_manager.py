@@ -2,7 +2,6 @@
 import os
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Random import get_random_bytes
 
 ENC_SALT_PATH = os.path.join(os.getenv("APPDATA"), "dotPass", "salt.enc")
 

@@ -4,6 +4,7 @@ from customtkinter import *
 from core.salt_manager import save_encrypted_salt
 from ui.dialogs.pin_sending_dialog import PinSendingDialog
 from ui.dialogs.sms_feedback_dialog import show_sms_sent_feedback
+from utils.resource_path import resource_path
 from utils.tooltip import SimpleTooltip
 from core.password_generator import generate_password
 from utils.layout import center_window
@@ -44,7 +45,7 @@ class MainPage:
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
         try:
-            warning_icon = Image.open("ui/images/flag_icon.png").resize((18, 18))
+            warning_icon = Image.open(resource_path("ui/images/flag_icon.png")).resize((18, 18))
             self.warning_image = CTkImage(warning_icon)
         except Exception as e:
             print("Failed to load warning image:", e)
@@ -75,17 +76,16 @@ class MainPage:
                 profile_data = json.load(f)
 
                 if profile_data.get("pin_sent", True):
-                    return  # Pin deja trimis
+                    return
 
-                # verificăm dacă trebuie reamintit
                 reminder_str = profile_data.get("reminder")
                 if reminder_str:
                     try:
                         reminder_date = datetime.datetime.fromisoformat(reminder_str)
                         if reminder_date > datetime.datetime.now():
-                            return  # încă nu a trecut o săptămână
+                            return
                     except Exception:
-                        pass  # dacă reminder_str e corupt, continuăm
+                        pass
 
                 phone = profile_data.get("phone")
 
@@ -110,7 +110,6 @@ class MainPage:
                     ChangePhoneNumberDialog()
                     return
 
-                # Ștergem salt.enc dacă există
                 from utils.config import ENCRYPTED_SALT_PATH
                 if os.path.exists(ENCRYPTED_SALT_PATH):
                     os.remove(ENCRYPTED_SALT_PATH)
@@ -126,7 +125,6 @@ class MainPage:
                         except Exception as e:
                             print(f"[dotPass] Failed to save encrypted salt: {e}")
 
-                # Actualizăm și salvăm din nou profilul
                 profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
                 profile_data["pin_sent"] = True
                 f.seek(0)
@@ -231,30 +229,27 @@ class MainPage:
                     if not manual and last_check_str:
                         last_check = datetime.datetime.fromisoformat(last_check_str)
                         if (datetime.datetime.now() - last_check).days < 7:
-                            return  # încă nu a trecut timpul
+                            return
 
                     cursor = self.conn.cursor()
                     rows = cursor.execute("SELECT site, username, password FROM accounts").fetchall()
                     breached = []
 
-                    self.breached_accounts.clear()  # resetăm vechiul set
+                    self.breached_accounts.clear()
 
                     for site, user, pwd in rows:
                         count = check_password_breach(pwd)
                         if count > 0:
                             self.breached_accounts.add((site, user))
-                            breached.append((site, user, count))  # păstrăm tuple complet
+                            breached.append((site, user, count))
 
-                    # deschidem UI modern, nu alert
                     BreachResultPopup(self.root, breached)
 
-                    # salvăm noua dată de scanare doar dacă e manual sau scană efectivă
                     profile_data["lastCheck"] = datetime.datetime.now().isoformat()
                     f.seek(0)
                     json.dump(profile_data, f)
                     f.truncate()
 
-                    # refacem UI cu iconițe
                     self.refresh_account_list()
 
         except Exception as e:
@@ -305,13 +300,6 @@ class MainPage:
             return
 
         site, user, pwd = row
-
-        try:
-            icon_site = CTkImage(Image.open("ui/images/website.png").resize((22, 22)))
-            icon_user = CTkImage(Image.open("ui/images/username.png").resize((22, 22)))
-            icon_pass = CTkImage(Image.open("ui/images/pass.png").resize((22, 22)))
-        except:
-            icon_site = icon_user = icon_pass = None
 
         self.current_rowid = rowid
         self.view_mode = True
@@ -369,11 +357,11 @@ class MainPage:
         CTkCheckBox(self.detail_frame, text="Show password", variable=self.show_password,
                     command=toggle_show_pwd, font=SMALL_FONT).pack(pady=(10, 10))
 
-        # Label pentru afișarea calității parolei
+
         self.strength_label = CTkLabel(self.detail_frame, text="", font=SMALL_FONT)
         self.strength_label.pack()
 
-        # Buton "Suggest Strong Password", inițial ascuns
+
         self.suggest_button = CTkButton(self.detail_frame, text="Suggest Strong Password",
                                         command=self.suggest_strong_password, font=APP_FONT, width=220)
         self.suggest_button.pack(pady=(10, 10))
@@ -392,10 +380,9 @@ class MainPage:
             self.detail_title.configure(text="Edit Account")
             self.edit_btn.configure(text="Confirm")
 
-            # Afișăm butonul de sugestie și conectăm verificarea parolei
             self.suggest_button.pack(pady=(10, 10))
             self.pwd_entry.bind("<KeyRelease>", self.check_password_strength)
-            self.check_password_strength()  # afișează forțat evaluarea actuală
+            self.check_password_strength()
 
         else:
             site = self.site_entry.get().strip()
@@ -415,9 +402,9 @@ class MainPage:
             self.load_account_details(self.current_rowid)
 
     def password_strength(self, password):
-        if len(password) < 6:
+        if len(password) < 8:
             return "weak", "#E53935"
-        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 8:
+        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 10:
             return "strong", "#43A047"
         else:
             return "medium", "#FBC02D"
@@ -531,9 +518,9 @@ class MainPage:
             if confirm == "":
                 match_label.configure(text="")
             elif confirm == pwd:
-                match_label.configure(text="\u2713 Passwords match", text_color="#43A047")
+                match_label.configure(text="Passwords match", text_color="#43A047")
             else:
-                match_label.configure(text="\u2717 Passwords do not match", text_color="#E53935")
+                match_label.configure(text="Passwords do not match", text_color="#E53935")
 
         pwd_entry.bind("<KeyRelease>", on_key_update)
         confirm_entry.bind("<KeyRelease>", on_key_update)

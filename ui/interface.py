@@ -1,7 +1,5 @@
 import json
 import hashlib
-import datetime
-from core.breach_check import check_password_breach
 from utils.config import PROFILE_PATH
 from customtkinter import *
 from PIL import Image
@@ -12,6 +10,8 @@ from utils.config import SALT_PATH, MASTER_HASH_PATH, DUMMY_HASH_PATH, DB_PATH, 
 from ui.main_page import MainPage
 from core.db import load_or_create_vault
 from customtkinter import get_appearance_mode
+
+from utils.resource_path import resource_path
 from utils.setup import protect_file
 from utils.style import APP_FONT, TITLE_FONT, SUB_FONT, SMALL_FONT
 
@@ -67,7 +67,6 @@ def show_loading_and_validate(password_entry, app_frame):
     hash_input = hashlib.sha256(password.encode() + salt).hexdigest()
 
     if not os.path.exists(MASTER_HASH_PATH):
-        # Salvează automat master.hash
         hash_val = hashlib.sha256(password.encode() + salt).hexdigest()
         with open(MASTER_HASH_PATH, "w") as f:
             f.write(hash_val)
@@ -147,11 +146,10 @@ def launch_app():
             pass
 
     set_appearance_mode("System")
-    set_default_color_theme("ui/themes/premium-blue.json")
+    set_default_color_theme(resource_path("ui/themes/premium-blue.json"))
 
     app = CTk()
 
-    # IMPORTANT: aplică maximizarea imediat după creare, înainte de orice pack/place
     if was_maximized:
         app.after(100, lambda: app.state("zoomed"))
     else:
@@ -162,8 +160,8 @@ def launch_app():
 
     # LEFT IMAGE
     try:
-        side_img = CTkImage(light_image=Image.open("ui/images/side-img.png"),
-                            dark_image=Image.open("ui/images/side-img.png"),
+        side_img = CTkImage(light_image=Image.open(resource_path("ui/images/side-img.png")),
+                            dark_image=Image.open(resource_path("ui/images/side-img.png")),
                             size=(256, 256))
         CTkLabel(master=app, text="", image=side_img).pack(expand=False, side="left")
     except:
@@ -221,5 +219,4 @@ def launch_app():
     appearance_switch.set(current_mode)
     appearance_switch.pack(anchor="e", padx=5, pady=(2, 0))
 
-    # afișăm doar la final
     app.mainloop()

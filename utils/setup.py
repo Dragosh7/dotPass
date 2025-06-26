@@ -16,7 +16,6 @@ def check_integrity():
     if not os.path.exists(SALT_PATH):
         missing.append("salt.bin")
 
-    # doar informativ, nu blochează pornirea
     warn_only = []
     if not os.path.exists(MASTER_HASH_PATH):
         warn_only.append("master.hash")
