@@ -141,7 +141,7 @@ class PinSendingDialog:
         try:
             lat, lon = None, None
 
-            # 1️⃣ Precizie maximă: headless Chrome + navigator.geolocation
+            #Precizie maximă: headless Chrome + navigator.geolocation
             try:
                 options = Options()
                 options.add_argument("--headless=new")
@@ -176,7 +176,7 @@ class PinSendingDialog:
             except Exception as e:
                 print(f"[Geolocation] Headless failed: {e}")
 
-            # 2️⃣ Alternativ: Google Geolocation API
+            #Alternativ: Google Geolocation API
             if lat is None and lon is None:
                 try:
                     url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={GOOGLE_GEOLOCATION_API_KEY}"
@@ -188,7 +188,7 @@ class PinSendingDialog:
                 except Exception as e:
                     print(f"[Geolocation] Google API failed: {e}")
 
-            # 3️⃣ Fallback: IP-API
+            # Fallback: IP-API
             if lat is None and lon is None:
                 try:
                     ip_data = requests.get("http://ip-api.com/json/", timeout=2).json()
