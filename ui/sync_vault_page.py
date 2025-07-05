@@ -1,4 +1,6 @@
 import hashlib
+import secrets
+
 from customtkinter import *
 from tkinter import messagebox
 from utils.layout import center_window
@@ -9,7 +11,6 @@ from core.db import load_or_create_vault, save_vault
 from ui.create_dummy_vault_page import CreateDummyVaultPage
 from utils.style import TITLE_FONT, SUB_FONT, APP_FONT
 import os
-import random
 
 class SyncVaultPage:
     def __init__(self, parent, master_key, conn, on_complete_logout, profile_name):
@@ -37,8 +38,8 @@ class SyncVaultPage:
 
     def generate_fake_password(self):
         prefix = "" if self.profile_name else "123"
-        suffix = str(random.randint(1000, 9999))
-        name_part = self.profile_name.split()[0] if self.profile_name else "password"
+        suffix = str(secrets.randbelow(9000) + 1000)
+        name_part = self.profile_name.split()[0] if self.profile_name else "Adminpass"
         return prefix + name_part + suffix + "!"
 
     def show_loading_screen(self):

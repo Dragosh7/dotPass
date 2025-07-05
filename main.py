@@ -1,7 +1,7 @@
 from tkinter import messagebox, filedialog
 import os
 from core.salt_manager import decrypt_salt_with_pin
-from ui.create_profile_only_page import CreateProfileOnlyPage
+from ui.create_basic_profile_page import CreateProfileOnlyPage
 from ui.dialogs.pin_input_dialog import PinInputDialog
 from utils.config import SALT_PATH
 from utils.setup import check_integrity
@@ -21,7 +21,7 @@ def try_decrypt_salt(path):
             messagebox.showinfo("Success", "Salt restored successfully. Please restart dotPass.")
             os._exit(0)
         except Exception as e:
-            messagebox.showerror("Failed", f"Could not decrypt salt:\n{str(e)}")
+            messagebox.showerror("Failed", f"Could not decrypt salt\n{str(e)}")
             os._exit(1)
 
     PinInputDialog(handle_pin)

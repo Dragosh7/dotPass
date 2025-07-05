@@ -1,4 +1,4 @@
-import random
+import secrets
 import json
 import datetime
 from utils.config import PROFILE_PATH
@@ -8,7 +8,7 @@ class PinLogic:
         self.pin = None
 
     def generate_pin(self):
-        self.pin = str(random.randint(100000, 999999))
+        self.pin = str(secrets.randbelow(900000) + 100000)
         return self.pin
 
 def should_remind_pin():

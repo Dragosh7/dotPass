@@ -2,7 +2,7 @@ from customtkinter import *
 from tkinter import messagebox
 import hashlib
 from utils.layout import center_window
-from utils.config import SALT_PATH, DUMMY_HASH_PATH
+from utils.config import SALT_PATH, DUMMY_HASH_PATH, MASTER_HASH_PATH
 from core.hashing import get_or_create_salt
 from utils.resource_path import resource_path
 from utils.style import TITLE_FONT, SUB_FONT, APP_FONT, SMALL_FONT
@@ -66,6 +66,13 @@ class CreateDummyVaultPage:
 
         salt = get_or_create_salt(SALT_PATH)
         dummy_hash = hashlib.sha256(p1.encode() + salt).hexdigest()
+
+        with open(MASTER_HASH_PATH, 'r') as f:
+            master_hash = f.read().strip()
+
+        if dummy_hash == master_hash:
+            messagebox.showerror("Error", "Choose any other password.")
+            return
 
         with open(DUMMY_HASH_PATH, 'w') as f:
             f.write(dummy_hash)

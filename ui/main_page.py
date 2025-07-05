@@ -1,3 +1,4 @@
+import secrets
 import threading
 
 from customtkinter import *
@@ -12,7 +13,6 @@ import datetime
 from core.breach_check import check_password_breach
 import sqlite3
 import re
-import random
 import json
 import os
 from tkinter import messagebox
@@ -56,8 +56,8 @@ class MainPage:
         if not self.is_dummy and should_remind_pin():
             self.root.after(300, lambda: self.ask_send_pin_reminder())
 
-        if self.is_dummy:
-            threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
+        # if self.is_dummy:
+        #     threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
 
         self.breached_accounts = set()
 
@@ -100,7 +100,7 @@ class MainPage:
                 )
 
                 if should_send is None:
-                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=3)).isoformat()
                     f.seek(0)
                     json.dump(profile_data, f)
                     f.truncate()
@@ -130,10 +130,11 @@ class MainPage:
                 f.seek(0)
                 json.dump(profile_data, f)
                 f.truncate()
-
-                success = PinSendingDialog.send_sms_direct(phone, pin)
+                print(pin)
+                success= True
+                # success = PinSendingDialog.send_sms_direct(phone, pin)
                 if success:
-                    show_sms_sent_feedback(self.root, phone, pin)
+                    show_sms_sent_feedback(self.root, phone)
                 else:
                     messagebox.showerror("Error", "Could not send PIN. Check your internet connection.")
 
@@ -371,6 +372,34 @@ class MainPage:
                                   command=self.toggle_edit_view, font=APP_FONT, width=150)
         self.edit_btn.pack(pady=(0, 8))
 
+        CTkButton(
+            self.detail_frame,
+            text="Delete Account",
+            command=self.delete_account,
+            font=APP_FONT,
+            fg_color="#E53935",
+            hover_color="#C62828",
+            width=150
+        ).pack(pady=(0, 10))
+
+    def delete_account(self):
+        if not hasattr(self, "current_rowid"):
+            return
+
+        confirm = messagebox.askyesno("Confirm Deletion", "Are you sure you want to delete this account?")
+        if not confirm:
+            return
+
+        with self.conn:
+            self.conn.execute("DELETE FROM accounts WHERE rowid=?", (self.current_rowid,))
+
+        db_file = DUMMY_PATH if self.is_dummy else DB_PATH
+        save_vault(self.conn, self.master_key, db_file)
+
+
+        self.detail_frame.destroy()
+        self.refresh_account_list()
+
     def toggle_edit_view(self):
         if self.view_mode:
             self.view_mode = False
@@ -402,12 +431,28 @@ class MainPage:
             self.load_account_details(self.current_rowid)
 
     def password_strength(self, password):
-        if len(password) < 8:
+        score = 0
+
+        if len(password) >= 8:
+            score += 1
+        if len(password) >= 12:
+            score += 1
+
+        if re.search(r"[a-z]", password):
+            score += 1
+        if re.search(r"[A-Z]", password):
+            score += 1
+        if re.search(r"[0-9]", password):
+            score += 1
+        if re.search(r"[!@#$%^&*(),.?\":{}|<>_\[\]\\\/+=\-]", password):
+            score += 1
+
+        if score <= 2:
             return "weak", "#E53935"
-        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 10:
-            return "strong", "#43A047"
-        else:
+        elif 3 <= score <= 4:
             return "medium", "#FBC02D"
+        else:
+            return "strong", "#43A047"
 
     def check_password_strength(self, event=None):
         pwd = self.pwd_entry.get()
@@ -422,7 +467,7 @@ class MainPage:
 
     def generate_dummy_password(self):
         prefix = "123"
-        suffix = str(random.randint(1000, 9999))
+        suffix = str(secrets.randbelow(9000) + 1000)
         name_part = self.profile_name.split()[0] if self.profile_name else "password"
         return prefix + name_part + suffix
 

@@ -81,55 +81,6 @@ class PinSendingDialog:
         self.dialog.destroy()
         self.dialog.after(100, safe_callback)
 
-    # @staticmethod
-    # def send_dummy_emergency_sms(phone: str) -> bool:
-    #     if not phone or phone.strip() == "":
-    #         return False
-    #     try:
-    #         # IP-API location
-    #         ip_response = requests.get("http://ip-api.com/json/").json()
-    #         if ip_response.get("status") != "success":
-    #             raise Exception("IP-API failed")
-    #
-    #         ip_lat, ip_lon = ip_response["lat"], ip_response["lon"]
-    #         ip_location_link = f"https://www.google.com/maps/search/?api=1&query={ip_lat},{ip_lon}"
-    #
-    #         # Google Geolocation API location
-    #         google_url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={GOOGLE_GEOLOCATION_API_KEY}"
-    #         google_response = requests.post(google_url, json={}).json()
-    #
-    #         g_lat, g_lon = google_response["location"]["lat"], google_response["location"]["lng"]
-    #         g_location_link = f"https://www.google.com/maps/search/?api=1&query={g_lat},{g_lon}"
-    #
-    #         # Compose full message
-    #         body = (
-    #             "Emergency mode activated.\n\n"
-    #             f"My location (IP-API): {ip_location_link}\n"
-    #             f"My location (Google): {g_location_link}"
-    #         )
-    #
-    #         url = "https://app.smso.ro/api/v1/send"
-    #         headers = {"X-Authorization": SMSO_API_KEY}
-    #         data = {
-    #             "sender": SMSO_SENDER_ID,
-    #             "to": phone,
-    #             "body": body
-    #         }
-    #
-    #         print("\n=== EMERGENCY SMS DEBUG ===")
-    #         print(f"TO:     {phone}")
-    #         print(f"BODY:\n{body}")
-    #         print("===========================\n")
-    #
-    #         # Trimite SMS dacă e activ
-    #         # response = requests.post(url, headers=headers, data=data)
-    #         # return response.status_code == 200
-    #
-    #         return True  # debug mode
-    #
-    #     except Exception as e:
-    #         print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
-    #         return False
 
     @staticmethod
     def send_dummy_emergency_sms(phone: str) -> bool:
@@ -158,7 +109,6 @@ class PinSendingDialog:
                 })
 
                 driver = webdriver.Chrome(options=options)
-                # driver.get("file://" + os.path.abspath("utils/location/get_location.html"))
                 html_path = resource_path("utils/location/get_location.html")
                 driver.get(f"file://{html_path}")
                 time.sleep(2)
@@ -223,7 +173,7 @@ class PinSendingDialog:
             # print(f"BODY:\n{body}")
             # print("===========================\n")
 
-            resp = requests.post(url, headers=headers, data=data)
+            resp = requests.post(url, headers=headers, data=data, timeout=5)
             return resp.status_code == 200
 
         except Exception as e:
@@ -251,7 +201,7 @@ class PinSendingDialog:
         # print("=========================\n")
 
         try:
-            response = requests.post(url, headers=headers, data=data)
+            response = requests.post(url, headers=headers, data=data, timeout=5)
             return response.status_code == 200
         except Exception as e:
             # print(f"[dotPass - send_sms_direct] Error: {e}")

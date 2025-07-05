@@ -37,7 +37,7 @@ def test_add_account_to_vault():
     decrypted = decrypt_data(encrypted, key).decode()
     parsed = json.loads(decrypted)
 
-    print("Conturi curente în vault:", parsed)
+    print("\nConturi în db:", parsed)
 
     assert parsed["accounts"][-1]["site"] == "newsite.com"
     assert parsed["accounts"][-1]["username"] == "newuser"

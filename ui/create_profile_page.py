@@ -112,7 +112,7 @@ class CreateProfilePage:
         if not re.fullmatch(r"^\+?\d{10,15}$", phone):
             messagebox.showerror(
                 "Invalid Phone Number",
-                "Please enter a valid phone number (Use '+' or '00')."
+                "Please enter a valid phone number and include country code (Use '+' or '00')."
             )
             return
 
@@ -125,24 +125,21 @@ class CreateProfilePage:
                 )
                 return
 
-        confirm = messagebox.askyesno(
-            "Verify Phone Number",
-            f"Is this your trusted contact number?\n\n{phone}\n\nThis is where your recovery PIN will be sent."
+        messagebox.showinfo(
+            "PIN Info",
+            "A recovery PIN will be sent to the provided phone number.\n\nMake sure the number is correct. You will be asked to confirm it again after logging in."
         )
 
-        if not confirm:
-            return
-
-        pin_logic = PinLogic()
-        pin = pin_logic.generate_pin()
-
-        try:
-            messagebox.showinfo(
-                "Recovery PIN Generated",
-                f"Recovery PIN: {pin}\n\nSave this code somewhere safe.\nYou will need it to recover your vault on another device."
-            )
-        except:
-            pass
+        # pin_logic = PinLogic()
+        # pin = pin_logic.generate_pin()
+        #
+        # try:
+        #     messagebox.showinfo(
+        #         "Recovery PIN Generated",
+        #         f"Recovery PIN: {pin}\n\nSave this code somewhere safe.\nYou will need it to recover your vault on another device."
+        #     )
+        # except:
+        #     pass
 
         def after_send(success):
             if not success:
@@ -162,10 +159,10 @@ class CreateProfilePage:
 
             self.show_restart_popup()
 
-        salt = get_or_create_salt(SALT_PATH, pin=pin)
+        salt = get_or_create_salt(SALT_PATH)
         self.finalize_profile(name, phone, master, dummy, salt)
-
-        self.root.after(100, lambda: PinSendingDialog(self.root, phone, pin, after_send))
+        self.show_restart_popup()
+        #self.root.after(100, lambda: PinSendingDialog(self.root, phone, pin, after_send))
 
     def finalize_profile(self, name, phone, master, dummy, salt):
         master_hash = hashlib.sha256(master.encode() + salt).hexdigest()
@@ -184,7 +181,7 @@ class CreateProfilePage:
             json.dump({
                 "name": name,
                 "phone": phone,
-                "pin_sent": True,
+                "pin_sent": False,
                 "lastCheck": datetime.datetime.now().isoformat(),
                 "reminder": datetime.datetime.now().isoformat()
             }, f)

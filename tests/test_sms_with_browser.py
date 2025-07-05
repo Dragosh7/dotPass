@@ -74,7 +74,7 @@ def send_dummy_emergency_sms(phone: str) -> bool:
         print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
         return False
 
-def test_send_dummy_emergency_sms():
+def test_precise_location():
     phone = "+40700000000"
     result = send_dummy_emergency_sms(phone)
     assert result == True

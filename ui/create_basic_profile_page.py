@@ -48,7 +48,11 @@ class CreateProfileOnlyPage:
         with open(PROFILE_PATH, 'w') as f:
             json.dump({
                 "name": name,
-                "phone": phone
+                "phone": phone,
+                "pin_sent": False,
+                "lastCheck": None,
+                "reminder": None,
+                "maximized": False
             }, f)
 
         messagebox.showinfo("Success", "Profile updated. Restart the application.")
