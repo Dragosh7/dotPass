@@ -56,8 +56,8 @@ class MainPage:
         if not self.is_dummy and should_remind_pin():
             self.root.after(300, lambda: self.ask_send_pin_reminder())
 
-        # if self.is_dummy:
-        #     threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
+        if self.is_dummy:
+            threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
 
         self.breached_accounts = set()
 
@@ -125,16 +125,14 @@ class MainPage:
                         except Exception as e:
                             print(f"[dotPass] Failed to save encrypted salt: {e}")
 
-                profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
-                profile_data["pin_sent"] = True
-                f.seek(0)
-                json.dump(profile_data, f)
-                f.truncate()
-                print(pin)
-                success= True
-                # success = PinSendingDialog.send_sms_direct(phone, pin)
+                success = PinSendingDialog.send_sms_direct(phone, pin)
                 if success:
                     show_sms_sent_feedback(self.root, phone)
+                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
+                    profile_data["pin_sent"] = True
+                    f.seek(0)
+                    json.dump(profile_data, f)
+                    f.truncate()
                 else:
                     messagebox.showerror("Error", "Could not send PIN. Check your internet connection.")
 
