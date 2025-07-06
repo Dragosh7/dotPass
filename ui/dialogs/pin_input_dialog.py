@@ -1,9 +1,6 @@
 from customtkinter import *
 from tkinter import messagebox
-from utils.config import SALT_PATH
-from core.salt_manager import decrypt_salt_with_pin
 from utils.layout import center_window
-
 
 class PinInputDialog:
     def __init__(self, on_submit):

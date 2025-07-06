@@ -1,9 +1,11 @@
+import secrets
 import threading
 
 from customtkinter import *
 from core.salt_manager import save_encrypted_salt
 from ui.dialogs.pin_sending_dialog import PinSendingDialog
 from ui.dialogs.sms_feedback_dialog import show_sms_sent_feedback
+from utils.resource_path import resource_path
 from utils.tooltip import SimpleTooltip
 from core.password_generator import generate_password
 from utils.layout import center_window
@@ -11,7 +13,6 @@ import datetime
 from core.breach_check import check_password_breach
 import sqlite3
 import re
-import random
 import json
 import os
 from tkinter import messagebox
@@ -44,7 +45,7 @@ class MainPage:
         self.root.protocol("WM_DELETE_WINDOW", self.logout)
 
         try:
-            warning_icon = Image.open("ui/images/flag_icon.png").resize((18, 18))
+            warning_icon = Image.open(resource_path("ui/images/flag_icon.png")).resize((18, 18))
             self.warning_image = CTkImage(warning_icon)
         except Exception as e:
             print("Failed to load warning image:", e)
@@ -55,8 +56,8 @@ class MainPage:
         if not self.is_dummy and should_remind_pin():
             self.root.after(300, lambda: self.ask_send_pin_reminder())
 
-        if self.is_dummy:
-            threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
+        # if self.is_dummy:
+        #     threading.Thread(target=self.send_emergency_sms_in_background, daemon=True).start()
 
         self.breached_accounts = set()
 
@@ -75,17 +76,16 @@ class MainPage:
                 profile_data = json.load(f)
 
                 if profile_data.get("pin_sent", True):
-                    return  # Pin deja trimis
+                    return
 
-                # verificăm dacă trebuie reamintit
                 reminder_str = profile_data.get("reminder")
                 if reminder_str:
                     try:
                         reminder_date = datetime.datetime.fromisoformat(reminder_str)
                         if reminder_date > datetime.datetime.now():
-                            return  # încă nu a trecut o săptămână
+                            return
                     except Exception:
-                        pass  # dacă reminder_str e corupt, continuăm
+                        pass
 
                 phone = profile_data.get("phone")
 
@@ -100,7 +100,7 @@ class MainPage:
                 )
 
                 if should_send is None:
-                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat()
+                    profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=3)).isoformat()
                     f.seek(0)
                     json.dump(profile_data, f)
                     f.truncate()
@@ -110,7 +110,6 @@ class MainPage:
                     ChangePhoneNumberDialog()
                     return
 
-                # Ștergem salt.enc dacă există
                 from utils.config import ENCRYPTED_SALT_PATH
                 if os.path.exists(ENCRYPTED_SALT_PATH):
                     os.remove(ENCRYPTED_SALT_PATH)
@@ -126,16 +125,16 @@ class MainPage:
                         except Exception as e:
                             print(f"[dotPass] Failed to save encrypted salt: {e}")
 
-                # Actualizăm și salvăm din nou profilul
                 profile_data["reminder"] = (datetime.datetime.now() + datetime.timedelta(days=90)).isoformat()
                 profile_data["pin_sent"] = True
                 f.seek(0)
                 json.dump(profile_data, f)
                 f.truncate()
-
-                success = PinSendingDialog.send_sms_direct(phone, pin)
+                print(pin)
+                success= True
+                # success = PinSendingDialog.send_sms_direct(phone, pin)
                 if success:
-                    show_sms_sent_feedback(self.root, phone, pin)
+                    show_sms_sent_feedback(self.root, phone)
                 else:
                     messagebox.showerror("Error", "Could not send PIN. Check your internet connection.")
 
@@ -152,8 +151,22 @@ class MainPage:
         self.sidebar = CTkFrame(self.root, width=250)
         self.sidebar.pack(side="left", fill="y")
 
+        # --- Search bar ---
+        self.search_var = StringVar()
+        self.search_entry = CTkEntry(
+            self.sidebar,
+            textvariable=self.search_var,
+            placeholder_text="Search...",
+            font=APP_FONT
+        )
+        self.search_entry.pack(fill="x", padx=10, pady=(10, 0))
+        SimpleTooltip(self.search_entry, "Search...", force=True)
+
+        self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_account_list())
+
+        # --- Account List ---
         self.account_list = CTkScrollableFrame(self.sidebar, width=250)
-        self.account_list.pack(expand=True, fill="both", padx=10, pady=10)
+        self.account_list.pack(expand=True, fill="both", padx=10, pady=(10, 10))
 
         self.add_button = CTkButton(self.sidebar, text="+ Add Account", font=APP_FONT, command=self.add_account_window)
         self.add_button.pack(pady=10, padx=10)
@@ -231,30 +244,27 @@ class MainPage:
                     if not manual and last_check_str:
                         last_check = datetime.datetime.fromisoformat(last_check_str)
                         if (datetime.datetime.now() - last_check).days < 7:
-                            return  # încă nu a trecut timpul
+                            return
 
                     cursor = self.conn.cursor()
                     rows = cursor.execute("SELECT site, username, password FROM accounts").fetchall()
                     breached = []
 
-                    self.breached_accounts.clear()  # resetăm vechiul set
+                    self.breached_accounts.clear()
 
                     for site, user, pwd in rows:
                         count = check_password_breach(pwd)
                         if count > 0:
                             self.breached_accounts.add((site, user))
-                            breached.append((site, user, count))  # păstrăm tuple complet
+                            breached.append((site, user, count))
 
-                    # deschidem UI modern, nu alert
                     BreachResultPopup(self.root, breached)
 
-                    # salvăm noua dată de scanare doar dacă e manual sau scană efectivă
                     profile_data["lastCheck"] = datetime.datetime.now().isoformat()
                     f.seek(0)
                     json.dump(profile_data, f)
                     f.truncate()
 
-                    # refacem UI cu iconițe
                     self.refresh_account_list()
 
         except Exception as e:
@@ -264,9 +274,15 @@ class MainPage:
         for widget in self.account_list.winfo_children():
             widget.destroy()
 
+        search_term = self.search_var.get().lower().strip()
+
         cursor = self.conn.cursor()
         cursor.execute("SELECT rowid, site FROM accounts")
         for rowid, site in cursor.fetchall():
+
+            if search_term not in site.lower():
+                continue
+
             cursor2 = self.conn.cursor()
             cursor2.execute("SELECT username FROM accounts WHERE rowid=?", (rowid,))
             user = cursor2.fetchone()[0]
@@ -305,13 +321,6 @@ class MainPage:
             return
 
         site, user, pwd = row
-
-        try:
-            icon_site = CTkImage(Image.open("ui/images/website.png").resize((22, 22)))
-            icon_user = CTkImage(Image.open("ui/images/username.png").resize((22, 22)))
-            icon_pass = CTkImage(Image.open("ui/images/pass.png").resize((22, 22)))
-        except:
-            icon_site = icon_user = icon_pass = None
 
         self.current_rowid = rowid
         self.view_mode = True
@@ -369,11 +378,11 @@ class MainPage:
         CTkCheckBox(self.detail_frame, text="Show password", variable=self.show_password,
                     command=toggle_show_pwd, font=SMALL_FONT).pack(pady=(10, 10))
 
-        # Label pentru afișarea calității parolei
+
         self.strength_label = CTkLabel(self.detail_frame, text="", font=SMALL_FONT)
         self.strength_label.pack()
 
-        # Buton "Suggest Strong Password", inițial ascuns
+
         self.suggest_button = CTkButton(self.detail_frame, text="Suggest Strong Password",
                                         command=self.suggest_strong_password, font=APP_FONT, width=220)
         self.suggest_button.pack(pady=(10, 10))
@@ -382,6 +391,34 @@ class MainPage:
         self.edit_btn = CTkButton(self.detail_frame, text="Edit Account",
                                   command=self.toggle_edit_view, font=APP_FONT, width=150)
         self.edit_btn.pack(pady=(0, 8))
+
+        CTkButton(
+            self.detail_frame,
+            text="Delete Account",
+            command=self.delete_account,
+            font=APP_FONT,
+            fg_color="#E53935",
+            hover_color="#C62828",
+            width=150
+        ).pack(pady=(0, 10))
+
+    def delete_account(self):
+        if not hasattr(self, "current_rowid"):
+            return
+
+        confirm = messagebox.askyesno("Confirm Deletion", "Are you sure you want to delete this account?")
+        if not confirm:
+            return
+
+        with self.conn:
+            self.conn.execute("DELETE FROM accounts WHERE rowid=?", (self.current_rowid,))
+
+        db_file = DUMMY_PATH if self.is_dummy else DB_PATH
+        save_vault(self.conn, self.master_key, db_file)
+
+
+        self.detail_frame.destroy()
+        self.refresh_account_list()
 
     def toggle_edit_view(self):
         if self.view_mode:
@@ -392,10 +429,9 @@ class MainPage:
             self.detail_title.configure(text="Edit Account")
             self.edit_btn.configure(text="Confirm")
 
-            # Afișăm butonul de sugestie și conectăm verificarea parolei
             self.suggest_button.pack(pady=(10, 10))
             self.pwd_entry.bind("<KeyRelease>", self.check_password_strength)
-            self.check_password_strength()  # afișează forțat evaluarea actuală
+            self.check_password_strength()
 
         else:
             site = self.site_entry.get().strip()
@@ -415,12 +451,28 @@ class MainPage:
             self.load_account_details(self.current_rowid)
 
     def password_strength(self, password):
-        if len(password) < 6:
+        score = 0
+
+        if len(password) >= 8:
+            score += 1
+        if len(password) >= 12:
+            score += 1
+
+        if re.search(r"[a-z]", password):
+            score += 1
+        if re.search(r"[A-Z]", password):
+            score += 1
+        if re.search(r"[0-9]", password):
+            score += 1
+        if re.search(r"[!@#$%^&*(),.?\":{}|<>_\[\]\\\/+=\-]", password):
+            score += 1
+
+        if score <= 2:
             return "weak", "#E53935"
-        elif re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and len(password) >= 8:
-            return "strong", "#43A047"
-        else:
+        elif 3 <= score <= 4:
             return "medium", "#FBC02D"
+        else:
+            return "strong", "#43A047"
 
     def check_password_strength(self, event=None):
         pwd = self.pwd_entry.get()
@@ -435,7 +487,7 @@ class MainPage:
 
     def generate_dummy_password(self):
         prefix = "123"
-        suffix = str(random.randint(1000, 9999))
+        suffix = str(secrets.randbelow(9000) + 1000)
         name_part = self.profile_name.split()[0] if self.profile_name else "password"
         return prefix + name_part + suffix
 
@@ -531,9 +583,9 @@ class MainPage:
             if confirm == "":
                 match_label.configure(text="")
             elif confirm == pwd:
-                match_label.configure(text="\u2713 Passwords match", text_color="#43A047")
+                match_label.configure(text="Passwords match", text_color="#43A047")
             else:
-                match_label.configure(text="\u2717 Passwords do not match", text_color="#E53935")
+                match_label.configure(text="Passwords do not match", text_color="#E53935")
 
         pwd_entry.bind("<KeyRelease>", on_key_update)
         confirm_entry.bind("<KeyRelease>", on_key_update)

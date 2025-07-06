@@ -1,7 +1,7 @@
 import requests
 import time
-from utils.secrets import SMSO_API_KEY, SMSO_SENDER_ID
 
+from utils.secrets import SMSO_API_KEY, SMSO_SENDER_ID
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -41,7 +41,6 @@ def get_precise_location():
         print(f"[dotPass - Geolocation] Failed to retrieve location: {e}")
         return None, None
 
-
 def send_dummy_emergency_sms(phone: str) -> bool:
     try:
         lat, lon = get_precise_location()
@@ -75,8 +74,7 @@ def send_dummy_emergency_sms(phone: str) -> bool:
         print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
         return False
 
-
-def test_send_dummy_emergency_sms():
-    phone = "+40700000000"  # înlocuiește cu un număr de test
+def test_precise_location():
+    phone = "+40700000000"
     result = send_dummy_emergency_sms(phone)
     assert result == True

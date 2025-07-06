@@ -1,0 +1,233 @@
+Run started:2025-07-03 15:51:36.142904
+
+Test results:
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b324_hashlib.html
+   Location: .\core\breach_check.py:10:11
+9	
+10	    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+11	    prefix = sha1[:5]
+
+--------------------------------------------------
+>> Issue: [B103:set_bad_file_permissions] Chmod setting a permissive mask 0o666 on file (path).
+   Severity: High   Confidence: High
+   CWE: CWE-732 (https://cwe.mitre.org/data/definitions/732.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b103_set_bad_file_permissions.html
+   Location: .\core\db.py:23:8
+22	    if os.path.exists(path):
+23	        os.chmod(path, 0o666)
+24	
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
+   Location: .\core\pin_logic.py:11:23
+10	    def generate_pin(self):
+11	        self.pin = str(random.randint(100000, 999999))
+12	        return self.pin
+
+--------------------------------------------------
+>> Issue: [B413:blacklist] The pyCrypto library and its module AES are no longer actively maintained and have been deprecated. Consider using pyca/cryptography library.
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_imports.html#b413-import-pycrypto
+   Location: .\core\salt_manager.py:3:0
+2	import os
+3	from Crypto.Cipher import AES
+4	from Crypto.Protocol.KDF import PBKDF2
+
+--------------------------------------------------
+>> Issue: [B413:blacklist] The pyCrypto library and its module PBKDF2 are no longer actively maintained and have been deprecated. Consider using pyca/cryptography library.
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_imports.html#b413-import-pycrypto
+   Location: .\core\salt_manager.py:4:0
+3	from Crypto.Cipher import AES
+4	from Crypto.Protocol.KDF import PBKDF2
+5	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:21:12
+20	            print("Eroare la decriptare:", e)
+21	            assert False, "Vault corupt sau parola gresita"
+22	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:42:4
+41	
+42	    assert parsed["accounts"][-1]["site"] == "newsite.com"
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:43:4
+42	    assert parsed["accounts"][-1]["site"] == "newsite.com"
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+44	    assert parsed["accounts"][-1]["password"] == "newpass321"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:44:4
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+44	    assert parsed["accounts"][-1]["password"] == "newpass321"
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b113_request_without_timeout.html
+   Location: .\tests\test_sms.py:6:19
+5	    try:
+6	        response = requests.get("http://ip-api.com/json/")
+7	        data = response.json()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_sms.py:45:4
+44	    result = send_dummy_emergency_sms(phone)
+45	    assert result == True
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_sms_with_browser.py:80:4
+79	    result = send_dummy_emergency_sms(phone)
+80	    assert result == True
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\create_dummy_vault_page.py:28:8
+27	            CTkLabel(self.root, text="", image=icon).pack(pady=(15, 0))
+28	        except:
+29	            pass
+30	
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b113_request_without_timeout.html
+   Location: .\ui\dialogs\pin_sending_dialog.py:176:19
+175	
+176	            resp = requests.post(url, headers=headers, data=data)
+177	            return resp.status_code == 200
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b113_request_without_timeout.html
+   Location: .\ui\dialogs\pin_sending_dialog.py:204:23
+203	        try:
+204	            response = requests.post(url, headers=headers, data=data)
+205	            return response.status_code == 200
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\interface.py:145:8
+144	                was_maximized = data.get("maximized", False)
+145	        except Exception:
+146	            pass
+147	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\interface.py:167:4
+166	        CTkLabel(master=app, text="", image=side_img).pack(expand=False, side="left")
+167	    except:
+168	        pass
+169	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\main_page.py:87:20
+86	                            return
+87	                    except Exception:
+88	                        pass
+89	
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
+   Location: .\ui\main_page.py:469:21
+468	        prefix = "123"
+469	        suffix = str(random.randint(1000, 9999))
+470	        name_part = self.profile_name.split()[0] if self.profile_name else "password"
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
+   Location: .\ui\sync_vault_page.py:40:21
+39	        prefix = "" if self.profile_name else "123"
+40	        suffix = str(random.randint(10, 9999))
+41	        name_part = self.profile_name.split()[0] if self.profile_name else "Adminpass"
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\sync_vault_page.py:72:12
+71	                self.conn.close()
+72	            except:
+73	                pass
+74	            self.on_complete_logout()
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 1790
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 14
+		Medium: 3
+		High: 4
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 3
+		Medium: 0
+		High: 18
+Files skipped (0):

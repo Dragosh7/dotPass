@@ -1,0 +1,153 @@
+Run started:2025-07-05 11:47:31.616032
+
+Test results:
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b324_hashlib.html
+   Location: .\core\breach_check.py:10:11
+9	
+10	    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+11	    prefix = sha1[:5]
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:21:12
+20	            print("Eroare la decriptare:", e)
+21	            assert False, "Vault corupt sau parola gresita"
+22	
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:42:4
+41	
+42	    assert parsed["accounts"][-1]["site"] == "newsite.com"
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:43:4
+42	    assert parsed["accounts"][-1]["site"] == "newsite.com"
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+44	    assert parsed["accounts"][-1]["password"] == "newpass321"
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_encryption.py:44:4
+43	    assert parsed["accounts"][-1]["username"] == "newuser"
+44	    assert parsed["accounts"][-1]["password"] == "newpass321"
+
+--------------------------------------------------
+>> Issue: [B113:request_without_timeout] Call to requests without timeout
+   Severity: Medium   Confidence: Low
+   CWE: CWE-400 (https://cwe.mitre.org/data/definitions/400.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b113_request_without_timeout.html
+   Location: .\tests\test_sms.py:6:19
+5	    try:
+6	        response = requests.get("http://ip-api.com/json/")
+7	        data = response.json()
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_sms.py:45:4
+44	    result = send_dummy_emergency_sms(phone)
+45	    assert result == True
+
+--------------------------------------------------
+>> Issue: [B101:assert_used] Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b101_assert_used.html
+   Location: .\tests\test_sms_with_browser.py:80:4
+79	    result = send_dummy_emergency_sms(phone)
+80	    assert result == True
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\create_dummy_vault_page.py:28:8
+27	            CTkLabel(self.root, text="", image=icon).pack(pady=(15, 0))
+28	        except:
+29	            pass
+30	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\interface.py:145:8
+144	                was_maximized = data.get("maximized", False)
+145	        except Exception:
+146	            pass
+147	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\interface.py:167:4
+166	        CTkLabel(master=app, text="", image=side_img).pack(expand=False, side="left")
+167	    except:
+168	        pass
+169	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\main_page.py:87:20
+86	                            return
+87	                    except Exception:
+88	                        pass
+89	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
+   Location: .\ui\sync_vault_page.py:73:12
+72	                self.conn.close()
+73	            except:
+74	                pass
+75	            self.on_complete_logout()
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 1801
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 11
+		Medium: 1
+		High: 1
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 1
+		Medium: 0
+		High: 12
+Files skipped (0):

@@ -1,13 +1,14 @@
-from customtkinter import CTkToplevel, CTkLabel, CTkProgressBar
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import os
 import threading
 import requests
 import time
+from customtkinter import CTkToplevel, CTkLabel, CTkProgressBar
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from utils.secrets import SMSO_API_KEY, SMSO_SENDER_ID, GOOGLE_GEOLOCATION_API_KEY
 from utils.style import APP_FONT
-
+from utils.check_internet import has_internet
+from utils.resource_path import resource_path
 
 class PinSendingDialog:
     def __init__(self, parent, phone: str, pin: str, on_result):
@@ -45,6 +46,11 @@ class PinSendingDialog:
         win.geometry(f"{w}x{h}+{x}+{y}")
 
     def _send_sms_thread(self):
+
+        if not has_internet():
+            self.dialog.after(1000, lambda: self._finish(False))
+            return
+
         url = "https://app.smso.ro/api/v1/send"
         headers = {"X-Authorization": SMSO_API_KEY}
         data = {
@@ -53,18 +59,18 @@ class PinSendingDialog:
             "body": f"Your dotPass recovery PIN is: {self.pin}"
         }
 
-        print("\n=== DEBUG SMS PAYLOAD ===")
-        print(f"URL: {url}")
-        print(f"Headers: {headers}")
-        print(f"Data: {data}")
-        print("=========================\n")
-        success = True
-        # try:
-        #     response = requests.post(url, headers=headers, data=data)
-        #     success = response.status_code == 200
-        # except Exception as e:
-        #     print(f"[dotPass] SMS error: {e}")
-        #     success = False
+        # print("\n=== DEBUG SMS PAYLOAD ===")
+        # print(f"URL: {url}")
+        # print(f"Headers: {headers}")
+        # print(f"Data: {data}")
+        # print("=========================\n")
+        success = False
+        try:
+            response = requests.post(url, headers=headers, data=data, timeout=5)
+            success = response.status_code == 200
+        except Exception as e:
+            # print(f"[dotPass] SMS error: {e}")
+            success = False
 
         self.dialog.after(3500, lambda: self._finish(success))
 
@@ -75,64 +81,19 @@ class PinSendingDialog:
         self.dialog.destroy()
         self.dialog.after(100, safe_callback)
 
-    # @staticmethod
-    # def send_dummy_emergency_sms(phone: str) -> bool:
-    #     if not phone or phone.strip() == "":
-    #         return False
-    #     try:
-    #         # IP-API location
-    #         ip_response = requests.get("http://ip-api.com/json/").json()
-    #         if ip_response.get("status") != "success":
-    #             raise Exception("IP-API failed")
-    #
-    #         ip_lat, ip_lon = ip_response["lat"], ip_response["lon"]
-    #         ip_location_link = f"https://www.google.com/maps/search/?api=1&query={ip_lat},{ip_lon}"
-    #
-    #         # Google Geolocation API location
-    #         google_url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={GOOGLE_GEOLOCATION_API_KEY}"
-    #         google_response = requests.post(google_url, json={}).json()
-    #
-    #         g_lat, g_lon = google_response["location"]["lat"], google_response["location"]["lng"]
-    #         g_location_link = f"https://www.google.com/maps/search/?api=1&query={g_lat},{g_lon}"
-    #
-    #         # Compose full message
-    #         body = (
-    #             "Emergency mode activated.\n\n"
-    #             f"My location (IP-API): {ip_location_link}\n"
-    #             f"My location (Google): {g_location_link}"
-    #         )
-    #
-    #         url = "https://app.smso.ro/api/v1/send"
-    #         headers = {"X-Authorization": SMSO_API_KEY}
-    #         data = {
-    #             "sender": SMSO_SENDER_ID,
-    #             "to": phone,
-    #             "body": body
-    #         }
-    #
-    #         print("\n=== EMERGENCY SMS DEBUG ===")
-    #         print(f"TO:     {phone}")
-    #         print(f"BODY:\n{body}")
-    #         print("===========================\n")
-    #
-    #         # Trimite SMS dacă e activ
-    #         # response = requests.post(url, headers=headers, data=data)
-    #         # return response.status_code == 200
-    #
-    #         return True  # debug mode
-    #
-    #     except Exception as e:
-    #         print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
-    #         return False
 
     @staticmethod
     def send_dummy_emergency_sms(phone: str) -> bool:
+
+        if not has_internet():
+            return False
+
         if not phone or phone.strip() == "":
             return False
         try:
             lat, lon = None, None
 
-            # 1️⃣ Precizie maximă: headless Chrome + navigator.geolocation
+            #Precizie maximă: headless Chrome + navigator.geolocation
             try:
                 options = Options()
                 options.add_argument("--headless=new")
@@ -148,7 +109,8 @@ class PinSendingDialog:
                 })
 
                 driver = webdriver.Chrome(options=options)
-                driver.get("file://" + os.path.abspath("utils/location/get_location.html"))
+                html_path = resource_path("utils/location/get_location.html")
+                driver.get(f"file://{html_path}")
                 time.sleep(2)
                 js = """
                 return new Promise(resolve => {
@@ -167,7 +129,7 @@ class PinSendingDialog:
             except Exception as e:
                 print(f"[Geolocation] Headless failed: {e}")
 
-            # 2️⃣ Alternativ: Google Geolocation API
+            #Alternativ: Google Geolocation API
             if lat is None and lon is None:
                 try:
                     url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={GOOGLE_GEOLOCATION_API_KEY}"
@@ -179,7 +141,7 @@ class PinSendingDialog:
                 except Exception as e:
                     print(f"[Geolocation] Google API failed: {e}")
 
-            # 3️⃣ Fallback: IP-API
+            # Fallback: IP-API
             if lat is None and lon is None:
                 try:
                     ip_data = requests.get("http://ip-api.com/json/", timeout=2).json()
@@ -206,17 +168,13 @@ class PinSendingDialog:
                 "body": body
             }
 
-            print("\n=== EMERGENCY SMS DEBUG ===")
-            print(f"TO:     {phone}")
-            print(f"BODY:\n{body}")
-            print("===========================\n")
+            # print("\n=== EMERGENCY SMS DEBUG ===")
+            # print(f"TO:     {phone}")
+            # print(f"BODY:\n{body}")
+            # print("===========================\n")
 
-            # Debug only
-            return True
-
-            # Real sending (decomentează pentru producție):
-            # resp = requests.post(url, headers=headers, data=data)
-            # return resp.status_code == 200
+            resp = requests.post(url, headers=headers, data=data, timeout=5)
+            return resp.status_code == 200
 
         except Exception as e:
             print(f"[dotPass - Emergency SMS] Failed to send alert: {e}")
@@ -224,6 +182,10 @@ class PinSendingDialog:
 
     @staticmethod
     def send_sms_direct(phone: str, pin: str) -> bool:
+
+        if not has_internet():
+            return False
+
         url = "https://app.smso.ro/api/v1/send"
         headers = {"X-Authorization": SMSO_API_KEY}
         data = {
@@ -232,16 +194,15 @@ class PinSendingDialog:
             "body": f"Your dotPass recovery PIN is: {pin}"
         }
 
-        print("\n=== DEBUG SMS PAYLOAD ===")
-        print(f"URL: {url}")
-        print(f"Headers: {headers}")
-        print(f"Data: {data}")
-        print("=========================\n")
+        # print("\n=== DEBUG SMS PAYLOAD ===")
+        # print(f"URL: {url}")
+        # print(f"Headers: {headers}")
+        # print(f"Data: {data}")
+        # print("=========================\n")
 
-        # try:
-        #     response = requests.post(url, headers=headers, data=data)
-        #     return response.status_code == 200
-        # except Exception as e:
-        #     print(f"[dotPass - send_sms_direct] Error: {e}")
-        #     return False
-        return True
+        try:
+            response = requests.post(url, headers=headers, data=data, timeout=5)
+            return response.status_code == 200
+        except Exception as e:
+            # print(f"[dotPass - send_sms_direct] Error: {e}")
+            return False
