@@ -151,8 +151,22 @@ class MainPage:
         self.sidebar = CTkFrame(self.root, width=250)
         self.sidebar.pack(side="left", fill="y")
 
+        # --- Search bar ---
+        self.search_var = StringVar()
+        self.search_entry = CTkEntry(
+            self.sidebar,
+            textvariable=self.search_var,
+            placeholder_text="Search...",
+            font=APP_FONT
+        )
+        self.search_entry.pack(fill="x", padx=10, pady=(10, 0))
+        SimpleTooltip(self.search_entry, "Search...", force=True)
+
+        self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_account_list())
+
+        # --- Account List ---
         self.account_list = CTkScrollableFrame(self.sidebar, width=250)
-        self.account_list.pack(expand=True, fill="both", padx=10, pady=10)
+        self.account_list.pack(expand=True, fill="both", padx=10, pady=(10, 10))
 
         self.add_button = CTkButton(self.sidebar, text="+ Add Account", font=APP_FONT, command=self.add_account_window)
         self.add_button.pack(pady=10, padx=10)
@@ -260,9 +274,15 @@ class MainPage:
         for widget in self.account_list.winfo_children():
             widget.destroy()
 
+        search_term = self.search_var.get().lower().strip()
+
         cursor = self.conn.cursor()
         cursor.execute("SELECT rowid, site FROM accounts")
         for rowid, site in cursor.fetchall():
+
+            if search_term not in site.lower():
+                continue
+
             cursor2 = self.conn.cursor()
             cursor2.execute("SELECT username FROM accounts WHERE rowid=?", (rowid,))
             user = cursor2.fetchone()[0]

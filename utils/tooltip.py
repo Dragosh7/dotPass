@@ -43,6 +43,9 @@ class SimpleTooltip:
         self.alpha = 0.0
         self.fade_in()
 
+        if self.force:
+            tw.after(2500, self.hide)
+
     def fade_in(self):
         if self.tipwindow and self.alpha < 0.95:
             self.alpha += 0.1
