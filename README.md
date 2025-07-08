@@ -16,8 +16,7 @@
 
 | Sistem          | Link Descărcare              |
 |-----------------|------------------------------|
-| Windows 10      | [dotPass_win10.zip](https://github.com/Dragosh7/dotPass/releases/tag/v1.0) |
-| Windows 11      | [dotPass_win11.zip](https://github.com/Dragosh7/dotPass/releases/tag/v1.0/dotPass_win11.zip) |
+| Windows 10/11   | [dotPass.zip](https://github.com/Dragosh7/dotPass/releases/tag/v1.1) |
 
 ## 🧰 Utilizare
 
